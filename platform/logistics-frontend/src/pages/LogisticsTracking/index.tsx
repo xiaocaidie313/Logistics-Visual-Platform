@@ -17,7 +17,7 @@ const MOCK_PATH: [number, number][] = [
 
 const LogisticsTracking: React.FC = () => {
     const { map, AMap } = useAMap('map-container');
-    const [currentPos, setCurrentPos] = useState<[number, number] | null>(null);
+    const [currentPos, setCurrentPos] = useState<[number, number]>(MOCK_PATH[0]);
 
     // Ant Design 样式 hook
     const { token: { colorBgContainer } } = theme.useToken();
