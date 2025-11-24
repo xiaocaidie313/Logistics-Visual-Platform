@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 // --- 1. 连接数据库 ---
-mongoose.connect('mongodb://localhost:27017/logistics_db')
+mongoose.connect('mongodb://localhost:27017/logistics')
     .then(() => console.log('✅ MongoDB 连接成功'))
     .catch(err => console.error('❌ MongoDB 连接失败:', err));
 
