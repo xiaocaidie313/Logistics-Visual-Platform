@@ -1,0 +1,11 @@
+{
+  "name": "logistics-platform",
+  "version": "1.0.0",
+  "scripts": {
+    "install:all": "npm install --prefix logistics-backend && npm install --prefix logistics-frontend",
+    "dev": "concurrently \"npm run dev --prefix logistics-backend\" \"npm run dev --prefix logistics-frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
