@@ -1,0 +1,77 @@
+import mongoose from 'mongoose'
+
+const goodsDeailSchema = new mongoose.Schema(
+    {
+        id:{
+            type:String,
+            required:true,
+            unique:true,        
+        },
+        orderId:{
+            type:String,
+            required:true,
+        },
+        skuname:{
+            type:String,
+            required:true,
+        },
+        status:{
+            type:String,
+            enum:{
+                values:["pending", "paid", "shipped", "confirmed", "delivered", "cancelled", "refunded"],
+                default:"pending",
+            },
+            required:true,
+        },
+        ordertime:{
+            type:Date,
+            required:true,
+        },
+        price:{
+            type:Number,
+            required:true,
+        },
+        amount:{
+            type:Number,
+            required:true,
+        },
+        totprice:{
+            type:Number,
+            required:true,
+        },
+        userinfo:{
+            id:{
+                type:String,
+                required:true,
+            },
+            username:{
+                type:String,
+                required:true,
+            },
+            useraddress:{
+                type:String,
+                required:true,
+            },
+            phonenumber:{
+                type:String,
+                required:true,
+            },
+        },
+        detail:{
+            color:{
+                type:String,
+                required:true,
+            },
+            size:{
+                type:String,
+                required:true,
+            },
+        },
+        totalprice:{
+            type:Number,
+            required:true,
+        },
+    },
+);
+const GoodsDetail = mongoose.model("GoodsDetail", goodsDeailSchema);
+export default GoodsDetail;

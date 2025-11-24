@@ -11,18 +11,18 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.21.2",
-    "cors": "^2.8.5"
+    "mongoose": "^9.0.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
-    "@types/express": "^5.0.0",
     "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/node": "^22.15.3",
     "eslint": "^9.39.1",
     "tsx": "^4.19.2",
     "typescript": "5.9.2"
   }
 }
-
