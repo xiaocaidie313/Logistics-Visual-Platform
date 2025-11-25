@@ -305,9 +305,9 @@ const OrderManagement: React.FC = () => {
 
   // 过滤订单数据
   const filteredOrders = orders.filter(order =>
-    order.skuname.toLowerCase().includes(searchText.toLowerCase()) ||
-    order.orderId.toLowerCase().includes(searchText.toLowerCase()) ||
-    order.useraddress.toLowerCase().includes(searchText.toLowerCase())
+    order.skuname?.toLowerCase().includes(searchText.toLowerCase()) ||
+    order.orderId?.toLowerCase().includes(searchText.toLowerCase()) ||
+    order.useraddress?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (

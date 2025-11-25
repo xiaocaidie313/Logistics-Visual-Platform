@@ -117,6 +117,7 @@ const UserManagement: React.FC = () => {
       title: '用户地址',
       dataIndex: 'useraddress',
       key: 'useraddress',
+      width: 300,
       ellipsis: true,
     },
     {
@@ -148,10 +149,10 @@ const UserManagement: React.FC = () => {
 
   // 过滤用户数据
   const filteredUsers = users.filter(user =>
-    user.username.toLowerCase().includes(searchText.toLowerCase()) ||
-    user.id.toLowerCase().includes(searchText.toLowerCase()) ||
-    user.phoneNumber.includes(searchText) ||
-    user.useraddress.toLowerCase().includes(searchText.toLowerCase())
+    user.username?.toLowerCase().includes(searchText.toLowerCase()) ||
+    user.id?.toLowerCase().includes(searchText.toLowerCase()) ||
+    user.phoneNumber?.includes(searchText) ||
+    user.useraddress?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (
