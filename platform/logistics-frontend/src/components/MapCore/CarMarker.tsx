@@ -50,7 +50,7 @@ const CarMarker: React.FC<CarMarkerProps> = ({ map, AMap, position }) => {
             // 检查 AMap.MoveAnimation 插件是否加载，如果没加载，用 setPosition 代替以防报错
             if (markerRef.current.moveTo) {
                 markerRef.current.moveTo(position, {
-                    duration: 1000,
+                    duration: 2000,
                     autoRotation: true,
                 });
             } else {

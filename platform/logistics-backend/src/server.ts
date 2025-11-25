@@ -13,7 +13,7 @@ app.use(express.json());
 
 // --- 1. 连接数据库 ---
 mongoose.connect('mongodb://localhost:27017/logistics')
-    .then(() => console.log('✅ MongoDB 连接成功'))
+    .then(() => console.log('✅ MongoDB (logistics) 连接成功'))
     .catch(err => console.error('❌ MongoDB 连接失败:', err));
 
 // --- 2. 仿真引擎 ---
@@ -30,18 +30,44 @@ const broadcast = (data: any) => {
 };
 
 // 启动单条轨迹仿真
-// 修改 server.ts 中的 startSimulation 函数
-
 const startSimulation = (track: ITrack) => {
-    if (activeSimulations.has(track.id)) return;
+    // 1. 防止冲突：清除旧定时器
+    if (activeSimulations.has(track.id)) {
+        console.log(`[仿真重置] 订单 ${track.id} 正在运行，清除旧任务并重启...`);
+        clearInterval(activeSimulations.get(track.id));
+        activeSimulations.delete(track.id);
+    }
 
-    let index = 0;
     const path = track.path;
     const totalSteps = path.length;
+    // 获取规划好的中转站列表 (如果没有则为空数组)
+    const transitStops = track.transitStops || [];
 
-    // 我们假设路径的中间点 (50%处) 是中转站
-    const middleIndex = Math.floor(totalSteps / 2);
-    let hasLoggedMiddle = false; // 防止重复记录中转站
+    // --- 🔴 核心修复开始：计算断点续传的 index ---
+    let startIndex = 0;
+
+    // 如果数据库里已经有当前坐标，尝试在路径中找到它
+    if (track.currentCoords && track.currentCoords.length === 2) {
+        // 我们遍历 path，找到与 currentCoords 经纬度误差极小的那个点
+        // (使用 epsilon 0.000001 避免浮点数比较问题)
+        const foundIndex = path.findIndex(p =>
+            Math.abs(p[0] - track.currentCoords[0]) < 0.000001 &&
+            Math.abs(p[1] - track.currentCoords[1]) < 0.000001
+        );
+
+        if (foundIndex !== -1) {
+            startIndex = foundIndex;
+            console.log(`[进度恢复] 订单 ${track.id} 从第 ${startIndex} 步继续运输`);
+        } else {
+            console.log(`[进度警告] 未在路径中找到当前坐标，从头开始`);
+        }
+    }
+
+    // 将 index 初始化为找到的断点，而不是 0
+    let index = startIndex;
+    // --- 🔴 核心修复结束 ---
+
+    console.log(`[仿真启动] 订单 ${track.id} 开始移动，总步数: ${totalSteps}, 中转站数: ${transitStops.length}`);
 
     const timer = setInterval(async () => {
         // --- 阶段 A: 到达终点 ---
@@ -49,63 +75,73 @@ const startSimulation = (track: ITrack) => {
             clearInterval(timer);
             activeSimulations.delete(track.id);
 
-            // 1. 更新主状态
             track.logisticsStatus = 'delivered';
             track.currentCoords = track.endCoords;
 
-            // 2. 插入【已签收】物流详情
-            const finalLog = {
-                time: new Date(),
-                location: track.userAddress, // 收货地址
-                description: '您的快件已被【蜂巢快递柜】代收，感谢使用',
-                status: 'delivered',
-                operator: '快递员小王'
-            };
-            track.tracks.push(finalLog);
-
-            await track.save();
-
-            // 3. 推送“结束”消息给前端
-            broadcast({ type: 'STATUS_UPDATE', id: track.id, status: 'delivered', newLog: finalLog });
+            // 检查是否已经写过签收日志，防止重复
+            const hasFinalLog = track.tracks.some(t => t.status === 'delivered');
+            if (!hasFinalLog) {
+                const finalLog = {
+                    time: new Date(),
+                    location: track.userAddress,
+                    description: '您的快件已被【蜂巢快递柜】代收，感谢使用',
+                    status: 'delivered',
+                    operator: '快递员小王'
+                };
+                track.tracks.push(finalLog);
+                await track.save();
+                broadcast({ type: 'STATUS_UPDATE', id: track.id, status: 'delivered', newLog: finalLog });
+            }
             return;
         }
 
-        // --- 阶段 B: 到达中转站 (模拟) ---
-        // 当小车走到路径的一半时，模拟到达一个中转中心
-        if (index === middleIndex && !hasLoggedMiddle) {
-            hasLoggedMiddle = true;
+        // --- 阶段 B: 检查是否到达中转站 (多点支持) ---
+        // 逻辑：当前步数 index 是否落在某个中转站的 stepIndex 附近
+        const hitHub = transitStops.find(stop =>
+            index >= stop.stepIndex && index < stop.stepIndex + 2
+        );
 
-            // 1. 插入【到达中转】物流详情
-            // 我们简单地取发货地址的前两个字 + "中转中心" 模拟一下，或者根据之前的 Hub 逻辑
-            const transferLog = {
-                time: new Date(),
-                location: '华东区域枢纽中心',
-                description: '快件已到达【华东区域枢纽中心】，正发往下一站',
-                status: 'shipped',
-                operator: '分拣员8号'
-            };
+        if (hitHub) {
+            // 防止重复记录同一个中转站
+            const alreadyLogged = track.tracks.some(t => t.description.includes(hitHub.hubName));
 
-            track.tracks.push(transferLog);
-            await track.save();
-
-            // 2. 推送“新增日志”消息给前端 (前端收到后，在时间轴上加一个点)
-            broadcast({ type: 'LOG_UPDATE', id: track.id, newLog: transferLog });
+            if (!alreadyLogged) {
+                console.log(`[到达中转] ${hitHub.hubName}`);
+                const hubLog = {
+                    time: new Date(),
+                    location: hitHub.hubName,
+                    description: `快件已到达【${hitHub.hubName}】，正发往下一站`,
+                    status: 'shipped',
+                    operator: '分拣中心'
+                };
+                track.tracks.push(hubLog);
+                await track.save();
+                broadcast({ type: 'LOG_UPDATE', id: track.id, newLog: hubLog });
+            }
         }
 
         // --- 阶段 C: 实时移动 ---
         const currentPos = path[index];
 
-        // 实时推送坐标
+        // 更新内存状态
+        track.currentCoords = currentPos;
+
+        // 优化：每走 5 步存一次数据库，避免数据库 IO 太高，同时保证刷新页面时回退不太多
+        if (index % 5 === 0) {
+            await track.save();
+        }
+
         broadcast({
             type: 'LOCATION_UPDATE',
             id: track.id,
             position: currentPos,
             progress: Math.floor((index / totalSteps) * 100),
-            info: index < middleIndex ? '正在前往中转中心' : '正在前往目的地'
+            // 如果正好在中转站，显示中转站名字，否则显示运输中
+            info: hitHub ? `到达 ${hitHub.hubName}` : '运输中...'
         });
 
         index++;
-    }, 200); // 频率
+    }, 2000); // 2秒一步
 
     activeSimulations.set(track.id, timer);
 };
@@ -118,7 +154,8 @@ app.post('/api/tracks/create', async (req, res) => {
         const body = req.body;
 
         // A. 智能规划路线 (核心功能)
-        const { startCoords, endCoords, path } = planRoute(body.sendAddress, body.userAddress);
+        // 注意：geoService.ts 必须返回 transitStops
+        const { startCoords, endCoords, path, transitStops } = await planRoute(body.sendAddress, body.userAddress);
         // B. 提取省份
         const province = extractProvince(body.userAddress);
 
@@ -132,6 +169,7 @@ app.post('/api/tracks/create', async (req, res) => {
             endCoords,
             currentCoords: startCoords,
             path,
+            transitStops, // 🟢 存入数据库
             logisticsStatus: 'shipped',
             // 初始化一条轨迹记录
             tracks: [{
@@ -156,12 +194,28 @@ app.post('/api/tracks/create', async (req, res) => {
 
 // [GET] 获取某订单详情
 app.get('/api/tracks/:id', async (req, res) => {
-    const track = await TrackInfo.findOne({ id: req.params.id });
-    if (track && track.logisticsStatus === 'shipped') {
-        // 如果是刷新页面，且订单还在运输中，重启仿真
-        startSimulation(track);
+    try {
+        const trackId = req.params.id;
+        const track = await TrackInfo.findOne({ id: trackId });
+
+        if (!track) {
+            return res.status(404).json({ success: false, message: '未找到该运单' });
+        }
+
+        // 如果订单还在运输中，重启仿真 (确保刷新页面后小车继续动)
+        if (track.logisticsStatus === 'shipped' || track.logisticsStatus === 'shipping') {
+            startSimulation(track);
+        }
+
+        res.json({
+            success: true,
+            data: track
+        });
+
+    } catch (error) {
+        console.error("查询出错:", error);
+        res.status(500).json({ success: false, error: '服务器内部错误' });
     }
-    res.json(track);
 });
 
 // [GET] 省份订单密度统计 (MongoDB 聚合查询)
