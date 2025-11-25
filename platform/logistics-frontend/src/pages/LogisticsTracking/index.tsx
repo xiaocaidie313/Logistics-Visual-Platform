@@ -23,6 +23,9 @@ const LogisticsTracking: React.FC = () => {
     const [wsStatus, setWsStatus] = useState<string>('未连接');
 
     const wsRef = useRef<WebSocket | null>(null);
+    // 🔴 [核心修复 1]：使用 Ref 记录当前正在查看的订单 ID
+    // Ref 的值改变不会触发重渲染，但能保证在 WebSocket 回调中读到最新值
+    const activeOrderIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         fetchStats();
@@ -51,6 +54,13 @@ const LogisticsTracking: React.FC = () => {
     }, []);
 
     const handleWsMessage = (data: any) => {
+        // 🔴 [核心修复 2]：WebSocket 消息过滤器
+        // 如果收到的消息 ID 不等于当前正在查看的 ID，直接忽略！
+        // 这样就彻底杜绝了“上一单的数据干扰这一单”的问题
+        if (!data.id || data.id !== activeOrderIdRef.current) {
+            return;
+        }
+
         if (data.type === 'LOCATION_UPDATE') {
             if (data.position) {
                 setCurrentPos(data.position as [number, number]);
@@ -58,9 +68,9 @@ const LogisticsTracking: React.FC = () => {
         }
 
         if (data.type === 'STATUS_UPDATE' || data.type === 'LOG_UPDATE') {
-            if (data.id) {
-                fetchOrderDetails(data.id, false);
-            }
+            // 重新拉取数据以同步状态
+            fetchOrderDetails(data.id, false);
+
             if (data.status === 'delivered') {
                 fetchStats();
             }
@@ -79,7 +89,17 @@ const LogisticsTracking: React.FC = () => {
 
     const fetchOrderDetails = async (id: string, isSearchAction = false) => {
         if (!id) return;
-        if (isSearchAction) setLoading(true);
+
+        if (isSearchAction) {
+            setLoading(true);
+            // 清理旧状态
+            setOrder(null);
+            setCurrentPos(null);
+            setLogs([]);
+
+            // 🔴 [核心修复 3]：更新当前活跃 ID
+            activeOrderIdRef.current = id;
+        }
 
         try {
             const res = await fetch(`http://localhost:3002/api/tracks/${id}`);
@@ -89,8 +109,7 @@ const LogisticsTracking: React.FC = () => {
                 const data: OrderData = result.data;
                 setOrder(data);
                 setLogs(data.tracks);
-                // 🟢 确保这一行存在：使用数据库里的当前位置初始化小车
-                // 这样即使 WebSocket 还没推过来，小车也会先显示在起点
+
                 if (data.currentCoords) {
                     setCurrentPos(data.currentCoords as [number, number]);
                 }
@@ -126,6 +145,10 @@ const LogisticsTracking: React.FC = () => {
     const handleCreateMockOrder = async () => {
         setLoading(true);
         const mockId = `SF${Math.floor(Math.random() * 10000)}`;
+
+        // 🔴 [核心修复 4]：创建时也立即更新活跃 ID
+        activeOrderIdRef.current = mockId;
+
         const demoPayload = {
             id: mockId,
             orderId: `ORD-${Date.now()}`,
@@ -147,9 +170,11 @@ const LogisticsTracking: React.FC = () => {
             if (resData.success) {
                 message.success(`测试订单创建成功！ID: ${mockId}`);
                 fetchOrderDetails(mockId, true);
+            } else {
+                message.error(resData.message || '创建失败');
             }
         } catch (e) {
-            message.error('创建失败');
+            message.error('创建请求失败');
         } finally {
             setLoading(false);
         }
@@ -174,7 +199,6 @@ const LogisticsTracking: React.FC = () => {
         }]
     };
 
-    // --- 重点检查这里：必须有 return (...) ---
     return (
         <Layout style={{ height: '100vh' }}>
             <Sider width={400} style={{ background: colorBgContainer, padding: '16px', zIndex: 2, boxShadow: '2px 0 8px rgba(0,0,0,0.1)', overflowY: 'auto' }}>
@@ -240,10 +264,25 @@ const LogisticsTracking: React.FC = () => {
 
             <Content style={{ position: 'relative' }}>
                 <div id="map-container" style={{ width: '100%', height: '100%' }} />
+
                 {map && AMap && order && (
                     <>
-                        <PathLine map={map} AMap={AMap} path={order.path as [number, number][]} />
-                        {currentPos && <CarMarker map={map} AMap={AMap} position={currentPos} />}
+                        <PathLine
+                            key={`path-${order.id}`}
+                            map={map}
+                            AMap={AMap}
+                            path={order.path as [number, number][]}
+                            currentPosition={currentPos}
+                        />
+
+                        {currentPos && (
+                            <CarMarker
+                                key={`car-${order.id}`}
+                                map={map}
+                                AMap={AMap}
+                                position={currentPos}
+                            />
+                        )}
                     </>
                 )}
             </Content>
