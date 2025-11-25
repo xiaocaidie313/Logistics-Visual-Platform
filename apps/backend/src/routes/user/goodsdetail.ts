@@ -31,7 +31,6 @@ router.get('/goodsdetail/list', async (req: Request, res: Response) => {
     }
 });
 
-// 根据订单ID获取订单详情
 router.get('/goodsdetail/order/:orderId', async (req: Request, res: Response) => {
     try {
         const orderId = req.params.orderId;

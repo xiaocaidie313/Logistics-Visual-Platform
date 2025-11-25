@@ -2,6 +2,7 @@
 import express, {Request, Response } from 'express'
 import TrackInfo  from '../../models/track.js'
 import { sendResponse } from '../../shared/sendresponse.js'
+import { emitLogisticsUpdate, emitLogisticsStatusChange, emitLogisticsTrackAdded } from '../../services/websocket.js'
 
 const router  = express.Router();
 
@@ -11,10 +12,14 @@ router.post('/track', async (req: Request, res: Response) => {
         const trackData = req.body;
         const newTrack = new TrackInfo(trackData);
         const savedTrack = await newTrack.save();
+        
+        // 推送 WebSocket 事件
+        emitLogisticsUpdate(savedTrack.logisticsNumber, savedTrack);
+        
         sendResponse(res, 200, 'Success', savedTrack);
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : '创建物流记录失败';
-        sendResponse(res, 400, errorMessage, {});
+        sendResponse(res, 500, errorMessage, {});
     }
 });
 
@@ -82,6 +87,10 @@ router.put('/track/update/:id', async (req: Request, res: Response) => {
         if (!updatedTrack) {
             return sendResponse(res, 404, '未找到物流信息', {})
         }
+        
+        // 推送 WebSocket 事件
+        emitLogisticsUpdate(updatedTrack.logisticsNumber, updatedTrack);
+        
         sendResponse(res, 200, 'Success', updatedTrack);
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : '更新物流信息失败';
@@ -102,6 +111,10 @@ router.put('/track/order/:orderId/status', async (req: Request, res: Response) =
         if (!track) {
             return sendResponse(res, 404, '未找到物流信息', {})
         }
+        
+        // 推送 WebSocket 事件
+        emitLogisticsStatusChange(track.logisticsNumber, status, track);
+        
         sendResponse(res, 200, 'Success', track);
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : '更新物流状态失败';
@@ -127,6 +140,13 @@ router.post('/track/:id/track', async (req: Request, res: Response) => {
         }
         
         const updatedTrack = await track.save();
+        
+        // 推送 WebSocket 事件
+        emitLogisticsTrackAdded(track.logisticsNumber, trackNode);
+        if (trackNode.status) {
+            emitLogisticsStatusChange(track.logisticsNumber, trackNode.status, updatedTrack);
+        }
+        
         sendResponse(res, 200, 'Success', updatedTrack);
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : '添加物流轨迹失败';
