@@ -11,7 +11,11 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "@repo/ui": "*",
+    "antd": "^6.0.0",
+    "axios": "^1.13.2",
+    "dayjs": "^1.11.19",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
@@ -27,4 +31,3 @@
     "vite": "^6.0.5"
   }
 }
-
