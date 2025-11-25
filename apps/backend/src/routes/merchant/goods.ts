@@ -2,6 +2,7 @@ import express from 'express';
 import type { Request, Response } from 'express'; // 引入类型 避免报错
 import Goods from '../../models/goods.js';
 import { sendResponse } from '../../shared/sendresponse.js'; // 引入共用函数
+import { emitOrderCreated, emitOrderUpdate, emitOrderStatusChange } from '../../services/websocket.js';
 
 
 const router = express.Router();
@@ -12,6 +13,10 @@ router.post('/order', async (req: Request, res: Response) => {
         const orderData = req.body; // 从请求体获取信息 
         const newOrder = new Goods(orderData); //生成新订单
         const savedOrder = await newOrder.save(); // 保存订单
+        
+        // 推送 WebSocket 事件
+        emitOrderCreated(savedOrder.orderId, savedOrder);
+        
         sendResponse(res, 200, 'Success', savedOrder);
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : '创建订单失败'; // 报错
@@ -26,6 +31,12 @@ router.put('/order/update/:id', async (req:Request, res:Response) =>{
         const newOrder = req.body;
         //  mongoose的 findByIdAndUpdate 方法 
         const updatedOrder = await Goods.findByIdAndUpdate(req.params.id, newOrder, { new: true });
+        
+        if (updatedOrder) {
+            // 推送 WebSocket 事件
+            emitOrderUpdate(updatedOrder.orderId, updatedOrder);
+        }
+        
         sendResponse(res, 200, 'Success', updatedOrder);
     }
     catch(error:unknown){
@@ -76,6 +87,12 @@ router.put('/order/switch/status/:id', async (req:Request, res:Response) =>{
         const orderId = req.params.id;
         const newStatus = req.body.status;
         const updatedOrder = await Goods.findByIdAndUpdate(orderId, {status:newStatus}, {new:true});
+        
+        if (updatedOrder) {
+            // 推送 WebSocket 事件
+            emitOrderStatusChange(updatedOrder.orderId, newStatus, updatedOrder);
+        }
+        
         sendResponse(res, 200, 'Success', updatedOrder)
     }catch(error:unknown){
         const errorMessage = error instanceof Error ? error.message : '切换订单状态失败';
