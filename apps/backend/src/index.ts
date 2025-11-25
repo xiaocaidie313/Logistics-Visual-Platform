@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3002;  // 定义端口
 const httpServer = createServer(app);
 
 // MongoDB 连接配置
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/logistics';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://lms:123lms@47.109.143.184:27017/logistics';
 
 // 连接 MongoDB
 mongoose.connect(MONGODB_URI)
