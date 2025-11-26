@@ -15,8 +15,10 @@ import routes from './routes/index.js';
 import { WebSocketServer } from './services/websocket.js';
 
 const app = express();
-const PORT = process.env.PORT;  // 定义端口
-const BACKEND_SERVER_URL = process.env.BACKEND_SERVER_URL;
+const PORT = 3002;  // 定义端口
+//const BACKEND_SERVER_URL = process.env.BACKEND_SERVER_URL;//
+const BACKEND_SERVER_URL = "http://47.109.143.184";//
+
 if (!BACKEND_SERVER_URL) {
   throw new Error('BACKEND_SERVER_URL 环境变量未设置');
 }
@@ -25,7 +27,7 @@ if (!BACKEND_SERVER_URL) {
 const httpServer = createServer(app);
 
 // MongoDB 连接配置
-const MONGODB_URI = process.env.MONGO_URI;
+const MONGODB_URI = "mongodb://lms:123lms@47.109.143.184:27017/logistics";
 if (!MONGODB_URI) {
   throw new Error('MONGO_URI 环境变量未设置');
 }
