@@ -117,6 +117,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       // 验证每个地址的必填字段
       for (let i = 0; i < addresses.length; i++) {
         const addr = addresses[i];
+        if (!addr) continue; // 跳过未定义的地址
+        
         if (!addr.contactName || !addr.contactPhone || !addr.province || 
             !addr.city || !addr.district || !addr.detailAddress) {
           message.error(`地址 ${i + 1} 信息不完整,请填写所有必填项`);

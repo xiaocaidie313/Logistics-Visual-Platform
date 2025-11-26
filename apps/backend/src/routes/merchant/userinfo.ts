@@ -13,6 +13,12 @@ function hashPassword(password: string, salt?: string): { hashedPassword: string
     return { hashedPassword, salt: passwordSalt };
 }
 
+// 移除敏感信息的辅助函数
+function removeSensitiveInfo(userObj: any) {
+    const { password, salt, ...safeUser } = userObj;
+    return safeUser;
+}
+
 // 创建用户信息
 router.post('/userinfo', async (req: Request, res: Response) => {
     try {
@@ -44,9 +50,7 @@ router.post('/userinfo', async (req: Request, res: Response) => {
         const savedUser = await newUser.save();
         
         // 返回时移除敏感信息
-        const userResponse = savedUser.toObject();
-        delete userResponse.password;
-        delete userResponse.salt;
+        const userResponse = removeSensitiveInfo(savedUser.toObject());
         
         sendResponse(res, 200, '用户创建成功', userResponse);
     } catch (error: unknown) {
@@ -100,9 +104,7 @@ router.put('/userinfo/update/:id', async (req: Request, res: Response) => {
         }
         
         // 返回时移除敏感信息
-        const userResponse = updatedUser.toObject();
-        delete userResponse.password;
-        delete userResponse.salt;
+        const userResponse = removeSensitiveInfo(updatedUser.toObject());
         
         sendResponse(res, 200, '用户更新成功', userResponse);
     } catch (error: unknown) {
@@ -121,9 +123,7 @@ router.delete('/userinfo/delete/:id', async (req: Request, res: Response) => {
         }
         
         // 返回时移除敏感信息
-        const userResponse = deletedUser.toObject();
-        delete userResponse.password;
-        delete userResponse.salt;
+        const userResponse = removeSensitiveInfo(deletedUser.toObject());
         
         sendResponse(res, 200, '用户删除成功', userResponse);
     } catch (error: unknown) {
@@ -142,9 +142,7 @@ router.get('/userinfo/get/:id', async (req: Request, res: Response) => {
         }
         
         // 返回时移除敏感信息
-        const userResponse = user.toObject();
-        delete userResponse.password;
-        delete userResponse.salt;
+        const userResponse = removeSensitiveInfo(user.toObject());
         
         sendResponse(res, 200, 'Success', userResponse);
     } catch (error: unknown) {
@@ -163,9 +161,7 @@ router.get('/userinfo/username/:username', async (req: Request, res: Response) =
         }
         
         // 返回时移除敏感信息
-        const userResponse = user.toObject();
-        delete userResponse.password;
-        delete userResponse.salt;
+        const userResponse = removeSensitiveInfo(user.toObject());
         
         sendResponse(res, 200, 'Success', userResponse);
     } catch (error: unknown) {
@@ -180,12 +176,7 @@ router.get('/userinfo/list', async (req: Request, res: Response) => {
         const users = await Userinfo.find();
         
         // 批量移除敏感信息
-        const usersResponse = users.map(user => {
-            const userObj = user.toObject();
-            delete userObj.password;
-            delete userObj.salt;
-            return userObj;
-        });
+        const usersResponse = users.map(user => removeSensitiveInfo(user.toObject()));
         
         sendResponse(res, 200, 'Success', usersResponse);
     } catch (error: unknown) {
@@ -224,9 +215,7 @@ router.post('/userinfo/:id/address', async (req: Request, res: Response) => {
         user.addresses.push(addressData);
         await user.save();
         
-        const userResponse = user.toObject();
-        delete userResponse.password;
-        delete userResponse.salt;
+        const userResponse = removeSensitiveInfo(user.toObject());
         
         sendResponse(res, 200, '地址添加成功', userResponse);
     } catch (error: unknown) {
@@ -249,9 +238,7 @@ router.delete('/userinfo/:id/address/:addressId', async (req: Request, res: Resp
         user.addresses = user.addresses.filter(addr => addr._id?.toString() !== addressId);
         await user.save();
         
-        const userResponse = user.toObject();
-        delete userResponse.password;
-        delete userResponse.salt;
+        const userResponse = removeSensitiveInfo(user.toObject());
         
         sendResponse(res, 200, '地址删除成功', userResponse);
     } catch (error: unknown) {
@@ -287,9 +274,7 @@ router.put('/userinfo/:id/address/:addressId/default', async (req: Request, res:
         
         await user.save();
         
-        const userResponse = user.toObject();
-        delete userResponse.password;
-        delete userResponse.salt;
+        const userResponse = removeSensitiveInfo(user.toObject());
         
         sendResponse(res, 200, '默认地址设置成功', userResponse);
     } catch (error: unknown) {

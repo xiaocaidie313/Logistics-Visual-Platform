@@ -121,7 +121,10 @@ const UserManagement: React.FC = () => {
     if (!addresses || addresses.length === 0) {
       return <span style={{ color: '#999' }}>暂无地址</span>;
     }
-    const defaultAddress = addresses.find(addr => addr.isDefault) || addresses[0];
+    const defaultAddress = addresses.find(addr => addr?.isDefault) || addresses[0];
+    if (!defaultAddress) {
+      return <span style={{ color: '#999' }}>暂无地址</span>;
+    }
     return `${defaultAddress.province}${defaultAddress.city}${defaultAddress.district}${defaultAddress.detailAddress}`;
   };
 
