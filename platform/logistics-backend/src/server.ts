@@ -40,34 +40,20 @@ const startSimulation = (track: ITrack) => {
 
     const path = track.path;
     const totalSteps = path.length;
-    // 获取规划好的中转站列表 (如果没有则为空数组)
     const transitStops = track.transitStops || [];
 
-    // --- 计算断点续传的 index ---
+    // 计算断点续传
     let startIndex = 0;
-
-    // 如果数据库里已经有当前坐标，尝试在路径中找到它
     if (track.currentCoords && track.currentCoords.length === 2) {
-        // 我们遍历 path，找到与 currentCoords 经纬度误差极小的那个点
-        // (使用 epsilon 0.000001 避免浮点数比较问题)
         const foundIndex = path.findIndex(p =>
             Math.abs(p[0] - track.currentCoords[0]) < 0.000001 &&
             Math.abs(p[1] - track.currentCoords[1]) < 0.000001
         );
-
-        if (foundIndex !== -1) {
-            startIndex = foundIndex;
-            console.log(`[进度恢复] 订单 ${track.id} 从第 ${startIndex} 步继续运输`);
-        } else {
-            console.log(`[进度警告] 未在路径中找到当前坐标，从头开始`);
-        }
+        if (foundIndex !== -1) startIndex = foundIndex;
     }
 
-    // 将 index 初始化为找到的断点，而不是 0
     let index = startIndex;
-    // --- 核心修复结束 ---
-
-    console.log(`[仿真启动] 订单 ${track.id} 开始移动，总步数: ${totalSteps}, 中转站数: ${transitStops.length}`);
+    console.log(`[仿真启动] 订单 ${track.id} 开始移动，总步数: ${totalSteps}`);
 
     const timer = setInterval(async () => {
         // --- 阶段 A: 到达终点 ---
@@ -75,38 +61,35 @@ const startSimulation = (track: ITrack) => {
             clearInterval(timer);
             activeSimulations.delete(track.id);
 
-            track.logisticsStatus = 'delivered';
-            track.currentCoords = track.endCoords;
+            const finalLog = {
+                time: new Date(),
+                location: track.userAddress,
+                description: '您的快件已被【蜂巢快递柜】代收，感谢使用',
+                status: 'delivered',
+                operator: '快递员小王'
+            };
 
-            // 检查是否已经写过签收日志，防止重复
-            const hasFinalLog = track.tracks.some(t => t.status === 'delivered');
-            if (!hasFinalLog) {
-                const finalLog = {
-                    time: new Date(),
-                    location: track.userAddress,
-                    description: '您的快件已被【蜂巢快递柜】代收，感谢使用',
-                    status: 'delivered',
-                    operator: '快递员小王'
-                };
-                track.tracks.push(finalLog);
-                await track.save();
-                broadcast({ type: 'STATUS_UPDATE', id: track.id, status: 'delivered', newLog: finalLog });
-            }
+            // 🟢 [核心修复] 使用 findOneAndUpdate 原子更新，避开版本冲突
+            await TrackInfo.findOneAndUpdate(
+                { id: track.id },
+                {
+                    $set: { logisticsStatus: 'delivered', currentCoords: track.endCoords },
+                    $push: { tracks: finalLog }
+                }
+            );
+
+            broadcast({ type: 'STATUS_UPDATE', id: track.id, status: 'delivered', newLog: finalLog });
             return;
         }
 
-        // --- 阶段 B: 检查是否到达中转站 (多点支持) ---
-        // 逻辑：当前步数 index 是否落在某个中转站的 stepIndex 附近
-        const hitHub = transitStops.find(stop =>
-            index >= stop.stepIndex && index < stop.stepIndex + 2
-        );
-
+        // --- 阶段 B: 到达中转站 ---
+        const hitHub = transitStops.find(stop => index >= stop.stepIndex && index < stop.stepIndex + 2);
         if (hitHub) {
-            // 防止重复记录同一个中转站
-            const alreadyLogged = track.tracks.some(t => t.description.includes(hitHub.hubName));
+            // 这里需要先查一下最新的 track，因为 tracks 数组可能被并发修改了
+            const latestTrack = await TrackInfo.findOne({ id: track.id });
+            const alreadyLogged = latestTrack?.tracks.some(t => t.description.includes(hitHub.hubName));
 
             if (!alreadyLogged) {
-                console.log(`[到达中转] ${hitHub.hubName}`);
                 const hubLog = {
                     time: new Date(),
                     location: hitHub.hubName,
@@ -114,8 +97,13 @@ const startSimulation = (track: ITrack) => {
                     status: 'shipped',
                     operator: '分拣中心'
                 };
-                track.tracks.push(hubLog);
-                await track.save();
+
+                // 🟢 [核心修复] 使用原子更新插入日志
+                await TrackInfo.findOneAndUpdate(
+                    { id: track.id },
+                    { $push: { tracks: hubLog } }
+                );
+
                 broadcast({ type: 'LOG_UPDATE', id: track.id, newLog: hubLog });
             }
         }
@@ -123,12 +111,12 @@ const startSimulation = (track: ITrack) => {
         // --- 阶段 C: 实时移动 ---
         const currentPos = path[index];
 
-        // 更新内存状态
-        track.currentCoords = currentPos;
-
-        // 优化：每走 5 步存一次数据库，避免数据库 IO 太高，同时保证刷新页面时回退不太多
+        // 🟢 [核心修复] 只更新坐标，不读取整个文档再保存，极大降低冲突概率
         if (index % 5 === 0) {
-            await track.save();
+            await TrackInfo.updateOne(
+                { id: track.id },
+                { $set: { currentCoords: currentPos } }
+            );
         }
 
         broadcast({
@@ -136,12 +124,11 @@ const startSimulation = (track: ITrack) => {
             id: track.id,
             position: currentPos,
             progress: Math.floor((index / totalSteps) * 100),
-            // 如果正好在中转站，显示中转站名字，否则显示运输中
             info: hitHub ? `到达 ${hitHub.hubName}` : '运输中...'
         });
 
         index++;
-    }, 2000); // 2秒一步
+    }, 2000);
 
     activeSimulations.set(track.id, timer);
 };
