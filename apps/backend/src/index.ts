@@ -1,3 +1,12 @@
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// 加载根目录的 dev.env 文件
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../../../dev.env') });
+
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -6,13 +15,20 @@ import routes from './routes/index.js';
 import { WebSocketServer } from './services/websocket.js';
 
 const app = express();
-const PORT = process.env.PORT || 3002;  // 定义端口
+const PORT = process.env.PORT;  // 定义端口
+const BACKEND_SERVER_URL = process.env.BACKEND_SERVER_URL;
+if (!BACKEND_SERVER_URL) {
+  throw new Error('BACKEND_SERVER_URL 环境变量未设置');
+}
 
 // 创建http服务器 // 通过app入口  
 const httpServer = createServer(app);
 
 // MongoDB 连接配置
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://lxy:123lxy@47.109.143.184:27017/logistics';
+const MONGODB_URI = process.env.MONGO_URI;
+if (!MONGODB_URI) {
+  throw new Error('MONGO_URI 环境变量未设置');
+}
 
 // 连接 MongoDB
 mongoose.connect(MONGODB_URI)
@@ -36,7 +52,7 @@ app.get("/health", (req, res) => {
 });
 
 // API 路由示例
-app.get("/api/hello", (req, res) => {
+app.get("/", (req, res) => {
   res.send("Hello from 物流平台后端 API!" );
 });
 
@@ -45,8 +61,8 @@ WebSocketServer(httpServer);
 
 // 启动服务器
 httpServer.listen(PORT, () => {
-  console.log(`后端服务运行在 http://localhost:${PORT}`);
-  console.log(`健康检查: http://localhost:${PORT}/health`);
+  console.log(`后端服务运行在 ${BACKEND_SERVER_URL}:${PORT}`);
+  console.log(`健康检查: ${BACKEND_SERVER_URL}:${PORT}/health`);
   console.log(`WebSocket 服务已启动`);
 });
 

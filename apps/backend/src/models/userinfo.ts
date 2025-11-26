@@ -26,6 +26,12 @@ const userSchema = new mongoose.Schema(
             enum: ['male', 'female', 'other'],
             default: 'other',
         },
+        // 增加角色 
+        role:{
+            type: String,
+            enum: ['customer', 'merchant', 'admin'],
+            required: true,
+        },
         addresses: [
             {
                 contactName: {
@@ -74,8 +80,8 @@ const userSchema = new mongoose.Schema(
 );
 
 // 索引优化
-userSchema.index({ phoneNumber: 1 });
-userSchema.index({ username: 1 });
+userSchema.index({ phoneNumber: 1 },{unique: true}  );
+userSchema.index({ username: 1 },{unique: true});
 
 const UserInfo = mongoose.model("UserInfo", userSchema);
 export default UserInfo;

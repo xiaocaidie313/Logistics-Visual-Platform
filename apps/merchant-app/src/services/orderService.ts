@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3002/api/merchant';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;// api/merchant
 
 export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'confirmed' | 'delivered' | 'cancelled' | 'refunded';
 
