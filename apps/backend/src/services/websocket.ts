@@ -21,36 +21,36 @@ export const WebSocketServer = (httpServer: HttpServer) => {
   */
  // 房间机制
   io.on('connection', (socket: Socket) => {
-    console.log(`✅ 客户端连接: ${socket.id}`);
+    console.log(`客户端连接: ${socket.id}`);
 
     // 客户端加入特定订单的房间
     // 封装独特的join leave
     socket.on('join:order', (orderId: string) => {
       socket.join(`order:${orderId}`);
-      console.log(`📦 客户端 ${socket.id} 加入订单房间: order:${orderId}`);
+      console.log(`客户端 ${socket.id} 加入订单房间: order:${orderId}`);
     });
 
     // 客户端离开订单房间
     socket.on('leave:order', (orderId: string) => {
       socket.leave(`order:${orderId}`);
-      console.log(`📦 客户端 ${socket.id} 离开订单房间: order:${orderId}`);
+      console.log(`客户端 ${socket.id} 离开订单房间: order:${orderId}`);
     });
 
     // 客户端加入物流跟踪房间
     socket.on('join:track', (trackingNumber: string) => {
       socket.join(`track:${trackingNumber}`);
-      console.log(`🚚 客户端 ${socket.id} 加入物流房间: track:${trackingNumber}`);
+      console.log(`加入物流房间: ${socket.id} track:${trackingNumber}`);
     });
 
     // 客户端离开物流跟踪房间
     socket.on('leave:track', (trackingNumber: string) => {
       socket.leave(`track:${trackingNumber}`);
-      console.log(`🚚 客户端 ${socket.id} 离开物流房间: track:${trackingNumber}`);
+      console.log(`离开物流房间: ${socket.id} track:${trackingNumber}`);
     });
 
     // 断开连接
     socket.on('disconnect', () => {
-      console.log(`❌ 客户端断开连接: ${socket.id}`);
+      console.log(`客户端断开连接: ${socket.id}`);
     });
   });
 
