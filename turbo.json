@@ -16,7 +16,7 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "env": ["MONGO_URI", "PORT"]
+      "env": ["MONGO_URI", "PORT", "BACKEND_SERVER_URL"]
     }
   }
 }

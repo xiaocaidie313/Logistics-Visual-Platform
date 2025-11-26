@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 // 商品 SKU 子文档
 const skuSchema = new mongoose.Schema({
+  skuid:{
+    type: String,
+    required: true,
+    unique: true,
+  },
   skuName: {
     type: String,
     required: true,
