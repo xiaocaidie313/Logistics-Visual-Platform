@@ -1,7 +1,7 @@
 // 查询跟踪物流状态
 import express, {Request, Response } from 'express'
 import TrackInfo  from '../../models/track.js'
-import { sendResponse } from '../../shared/sendresponse.js'
+import { sendResponse } from '../../utils/index.js'
 import { emitLogisticsUpdate, emitLogisticsStatusChange, emitLogisticsTrackAdded } from '../../services/websocket.js'
 
 const router  = express.Router();

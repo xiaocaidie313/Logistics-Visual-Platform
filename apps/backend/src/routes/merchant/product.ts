@@ -1,7 +1,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import Product from '../../models/product.js';
-import { sendResponse } from '../../shared/sendresponse.js';
+import { sendResponse } from '../../utils/index.js';
 
 const router = express.Router();
 

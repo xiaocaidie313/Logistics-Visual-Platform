@@ -1,23 +1,11 @@
+
 import express from 'express';
 import type { Request, Response } from 'express';
-import crypto from 'crypto';
 import UserInfo from '../../models/userinfo.js';
-import { sendResponse } from '../../shared/sendresponse.js';
-
+import { sendResponse } from '../../utils/index.js';
+import { hashPassword, removeSensitiveInfo } from '../../utils/index.js';
 const router = express.Router();
 
-// 密码加密函数
-function hashPassword(password: string, salt?: string): { hashedPassword: string; salt: string } {
-    const passwordSalt = salt || crypto.randomBytes(16).toString('hex');
-    const hashedPassword = crypto.pbkdf2Sync(password, passwordSalt, 10000, 64, 'sha512').toString('hex');
-    return { hashedPassword, salt: passwordSalt };
-}
-
-// 移除敏感信息的辅助函数
-function removeSensitiveInfo(userObj: any) {
-    const { password, salt, ...safeUser } = userObj;
-    return safeUser;
-}
 
 // 创建用户信息
 router.post('/userInfo', async (req: Request, res: Response) => {

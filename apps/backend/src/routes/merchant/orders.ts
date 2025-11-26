@@ -1,7 +1,7 @@
 import express from "express";
 import type { Request, Response } from "express"; // 引入类型 避免报错
 import Orders from "../../models/order.js";
-import { sendResponse } from "../../shared/sendresponse.js"; // 引入共用函数
+import { sendResponse } from "../../utils/index.js"; // 引入共用函数
 import {
   emitOrderCreated,
   emitOrderUpdate,
