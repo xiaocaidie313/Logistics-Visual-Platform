@@ -1,18 +1,24 @@
 import { useState } from 'react';
 import { Layout, Menu } from 'antd';
-import { ShoppingOutlined, UserOutlined } from '@ant-design/icons';
+import { ShoppingOutlined, UserOutlined, AppstoreOutlined } from '@ant-design/icons';
 import OrderManagement from "./pages/OrderManagement";
 import UserManagement from "./pages/UserManagement";
+import ProductManagement from "./pages/ProductManagement";
 import "./App.css";
 
 const { Header, Sider, Content } = Layout;
 
-type MenuKey = 'orders' | 'users' | 'dashboard';
+type MenuKey = 'orders' | 'users' | 'products' | 'dashboard';
 
 function App() {
-  const [selectedMenu, setSelectedMenu] = useState<MenuKey>('orders');
+  const [selectedMenu, setSelectedMenu] = useState<MenuKey>('products');
 
   const menuItems = [
+    {
+      key: 'products',
+      icon: <AppstoreOutlined />,
+      label: '商品管理',
+    },
     {
       key: 'orders',
       icon: <ShoppingOutlined />,
@@ -27,12 +33,14 @@ function App() {
 
   const renderContent = () => {
     switch (selectedMenu) {
+      case 'products':
+        return <ProductManagement />;
       case 'orders':
         return <OrderManagement />;
       case 'users':
         return <UserManagement />;
       default:
-        return <OrderManagement />;
+        return <ProductManagement />;
     }
   };
 

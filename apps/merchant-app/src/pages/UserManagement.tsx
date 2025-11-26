@@ -164,6 +164,7 @@ const UserManagement: React.FC = () => {
       title: '默认地址',
       dataIndex: 'addresses',
       key: 'addresses',
+      width: 300,
       ellipsis: true,
       render: (addresses) => formatAddress(addresses),
     },

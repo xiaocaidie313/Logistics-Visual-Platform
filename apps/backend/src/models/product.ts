@@ -2,11 +2,6 @@ import mongoose from 'mongoose';
 
 // 商品 SKU 子文档
 const skuSchema = new mongoose.Schema({
-  skuId: {
-    type: String,
-    required: true,
-    unique: true,
-  },
   skuName: {
     type: String,
     required: true,
@@ -26,17 +21,11 @@ const skuSchema = new mongoose.Schema({
     color: String,
     size: String,
   },
-}, { _id: true });
+}, { _id: true }); // 保留 _id，每个 SKU 都有唯一的 ObjectId
 
 // 商品模型
 const productSchema = new mongoose.Schema(
   {
-    productId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
     productName: {
       type: String,
       required: true,
