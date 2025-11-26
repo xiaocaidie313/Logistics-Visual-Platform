@@ -63,7 +63,7 @@ const OrderManagement: React.FC = () => {
   };
 
   // 加载订单列表
-  const loadOrders = async (status?: OrderStatus) => {
+  const loadOrders = async (status?: OrderStatus | 'all') => {
     setLoading(true);
     try {
       const response = status && status !== 'all'

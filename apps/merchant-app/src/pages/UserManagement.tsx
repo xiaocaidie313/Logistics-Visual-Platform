@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Space, Modal, message, Input, Card, Tag } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, ManOutlined, WomanOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import UserFormModal from '../components/UserFormModal';
 import type { User } from '../services/userService';
@@ -81,11 +81,48 @@ const UserManagement: React.FC = () => {
 
   // 提交表单
   const handleSubmit = async (values: Omit<User, '_id'>) => {
-    if (modalMode === 'create') {
-      await createUser(values);
-    } else {
-      await updateUser(selectedUser!._id!, values);
+    try {
+      if (modalMode === 'create') {
+        const response = await createUser(values);
+        if (response.code === 200) {
+          message.success('创建用户成功');
+        } else {
+          message.error(response.message || '创建用户失败');
+        }
+      } else {
+        const response = await updateUser(selectedUser!._id!, values);
+        if (response.code === 200) {
+          message.success('更新用户成功');
+        } else {
+          message.error(response.message || '更新用户失败');
+        }
+      }
+      loadUsers();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || '操作失败');
+      throw error;
     }
+  };
+
+  // 性别标签渲染
+  const renderGender = (gender?: string) => {
+    switch (gender) {
+      case 'male':
+        return <Tag icon={<ManOutlined />} color="blue">男</Tag>;
+      case 'female':
+        return <Tag icon={<WomanOutlined />} color="pink">女</Tag>;
+      default:
+        return <Tag color="default">未设置</Tag>;
+    }
+  };
+
+  // 格式化地址显示
+  const formatAddress = (addresses: User['addresses']) => {
+    if (!addresses || addresses.length === 0) {
+      return <span style={{ color: '#999' }}>暂无地址</span>;
+    }
+    const defaultAddress = addresses.find(addr => addr.isDefault) || addresses[0];
+    return `${defaultAddress.province}${defaultAddress.city}${defaultAddress.district}${defaultAddress.detailAddress}`;
   };
 
   // 表格列定义
@@ -96,7 +133,6 @@ const UserManagement: React.FC = () => {
       width: 80,
       align: 'center',
       render: (_, __, index) => {
-        // 计算当前页的实际序号
         const { current = 1, pageSize = 10 } = pagination;
         return (current - 1) * pageSize + index + 1;
       },
@@ -114,11 +150,27 @@ const UserManagement: React.FC = () => {
       width: 150,
     },
     {
-      title: '用户地址',
-      dataIndex: 'useraddress',
-      key: 'useraddress',
-      width: 300,
+      title: '性别',
+      dataIndex: 'gender',
+      key: 'gender',
+      width: 100,
+      align: 'center',
+      render: (gender) => renderGender(gender),
+    },
+    {
+      title: '默认地址',
+      dataIndex: 'addresses',
+      key: 'addresses',
       ellipsis: true,
+      render: (addresses) => formatAddress(addresses),
+    },
+    {
+      title: '地址数量',
+      dataIndex: 'addresses',
+      key: 'addressCount',
+      width: 100,
+      align: 'center',
+      render: (addresses) => <Tag color="cyan">{addresses?.length || 0} 个</Tag>,
     },
     {
       title: '操作',
@@ -148,12 +200,18 @@ const UserManagement: React.FC = () => {
   ];
 
   // 过滤用户数据
-  const filteredUsers = users.filter(user =>
-    user.username?.toLowerCase().includes(searchText.toLowerCase()) ||
-    user.id?.toLowerCase().includes(searchText.toLowerCase()) ||
-    user.phoneNumber?.includes(searchText) ||
-    user.useraddress?.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const searchLower = searchText.toLowerCase();
+    const addressText = user.addresses?.map(addr => 
+      `${addr.province}${addr.city}${addr.district}${addr.detailAddress}`
+    ).join(' ') || '';
+    
+    return (
+      user.username?.toLowerCase().includes(searchLower) ||
+      user.phoneNumber?.includes(searchText) ||
+      addressText.toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div style={{ padding: '24px' }}>
@@ -206,7 +264,7 @@ const UserManagement: React.FC = () => {
               setPagination({ current: page, pageSize });
             },
           }}
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1200 }}
         />
       </Card>
 
