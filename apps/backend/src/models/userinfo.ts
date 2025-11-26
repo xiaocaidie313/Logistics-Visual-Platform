@@ -77,5 +77,5 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ phoneNumber: 1 });
 userSchema.index({ username: 1 });
 
-const Userinfo = mongoose.model("Userinfo", userSchema);
-export default Userinfo;
+const UserInfo = mongoose.model("UserInfo", userSchema);
+export default UserInfo;

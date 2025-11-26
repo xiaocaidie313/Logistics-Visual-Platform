@@ -254,7 +254,7 @@ const OrderManagement: React.FC = () => {
       key: 'totprice',
       width: 120,
       align: 'right',
-      render: (price) => <span style={{ color: '#ff4d4f', fontWeight: 600 }}>¥{price.toFixed(2)}</span>,
+      render: (price) => <span style={{ color: '#ff4d4f', fontWeight: 600 }}>¥{price?.toFixed(2)}</span>,
       sorter: (a, b) => a.totprice - b.totprice,
     },
     {

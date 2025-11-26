@@ -36,54 +36,54 @@ export interface ApiResponse<T> {
 
 // 创建用户
 export const createUser = async (userData: Omit<User, '_id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<User>> => {
-  const response = await axios.post(`${API_BASE_URL}/userinfo`, userData);
+  const response = await axios.post(`${API_BASE_URL}/userInfo`, userData);
   return response.data;
 };
 
 // 更新用户信息
 export const updateUser = async (id: string, userData: Partial<User>): Promise<ApiResponse<User>> => {
-  const response = await axios.put(`${API_BASE_URL}/userinfo/update/${id}`, userData);
+  const response = await axios.put(`${API_BASE_URL}/userInfo/update/${id}`, userData);
   return response.data;
 };
 
 // 删除用户
 export const deleteUser = async (id: string): Promise<ApiResponse<User>> => {
-  const response = await axios.delete(`${API_BASE_URL}/userinfo/delete/${id}`);
+  const response = await axios.delete(`${API_BASE_URL}/userInfo/delete/${id}`);
   return response.data;
 };
 
 // 获取单个用户信息
 export const getUser = async (id: string): Promise<ApiResponse<User>> => {
-  const response = await axios.get(`${API_BASE_URL}/userinfo/get/${id}`);
+  const response = await axios.get(`${API_BASE_URL}/userInfo/get/${id}`);
   return response.data;
 };
 
 // 根据用户名获取用户信息
 export const getUserByUsername = async (username: string): Promise<ApiResponse<User>> => {
-  const response = await axios.get(`${API_BASE_URL}/userinfo/username/${username}`);
+  const response = await axios.get(`${API_BASE_URL}/userInfo/username/${username}`);
   return response.data;
 };
 
 // 获取用户列表
 export const getUserList = async (): Promise<ApiResponse<User[]>> => {
-  const response = await axios.get(`${API_BASE_URL}/userinfo/list`);
+  const response = await axios.get(`${API_BASE_URL}/userInfo/list`);
   return response.data;
 };
 
 // 添加用户地址
 export const addUserAddress = async (userId: string, addressData: Address): Promise<ApiResponse<User>> => {
-  const response = await axios.post(`${API_BASE_URL}/userinfo/${userId}/address`, addressData);
+  const response = await axios.post(`${API_BASE_URL}/userInfo/${userId}/address`, addressData);
   return response.data;
 };
 
 // 删除用户地址
 export const deleteUserAddress = async (userId: string, addressId: string): Promise<ApiResponse<User>> => {
-  const response = await axios.delete(`${API_BASE_URL}/userinfo/${userId}/address/${addressId}`);
+  const response = await axios.delete(`${API_BASE_URL}/userInfo/${userId}/address/${addressId}`);
   return response.data;
 };
 
 // 设置默认地址
 export const setDefaultAddress = async (userId: string, addressId: string): Promise<ApiResponse<User>> => {
-  const response = await axios.put(`${API_BASE_URL}/userinfo/${userId}/address/${addressId}/default`);
+  const response = await axios.put(`${API_BASE_URL}/userInfo/${userId}/address/${addressId}/default`);
   return response.data;
 };

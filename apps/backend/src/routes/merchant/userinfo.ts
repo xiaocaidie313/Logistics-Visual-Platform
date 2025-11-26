@@ -1,7 +1,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import crypto from 'crypto';
-import Userinfo from '../../models/userinfo.js';
+import UserInfo from '../../models/userInfo.js';
 import { sendResponse } from '../../shared/sendresponse.js';
 
 const router = express.Router();
@@ -20,7 +20,7 @@ function removeSensitiveInfo(userObj: any) {
 }
 
 // 创建用户信息
-router.post('/userinfo', async (req: Request, res: Response) => {
+router.post('/userInfo', async (req: Request, res: Response) => {
     try {
         const userData = req.body;
         
@@ -30,13 +30,13 @@ router.post('/userinfo', async (req: Request, res: Response) => {
         }
         
         // 检查用户名是否已存在
-        const existingUser = await Userinfo.findOne({ username: userData.username });
+        const existingUser = await UserInfo.findOne({ username: userData.username });
         if (existingUser) {
             return sendResponse(res, 400, '用户名已存在', {});
         }
         
         // 检查手机号是否已存在
-        const existingPhone = await Userinfo.findOne({ phoneNumber: userData.phoneNumber });
+        const existingPhone = await UserInfo.findOne({ phoneNumber: userData.phoneNumber });
         if (existingPhone) {
             return sendResponse(res, 400, '手机号已被使用', {});
         }
@@ -46,7 +46,7 @@ router.post('/userinfo', async (req: Request, res: Response) => {
         userData.password = hashedPassword;
         userData.salt = salt;
         
-        const newUser = new Userinfo(userData);
+        const newUser = new UserInfo(userData);
         const savedUser = await newUser.save();
         
         // 返回时移除敏感信息
@@ -60,7 +60,7 @@ router.post('/userinfo', async (req: Request, res: Response) => {
 });
 
 // 更新用户信息
-router.put('/userinfo/update/:id', async (req: Request, res: Response) => {
+router.put('/userInfo/update/:id', async (req: Request, res: Response) => {
     try {
         const newUserData = req.body;
         
@@ -73,7 +73,7 @@ router.put('/userinfo/update/:id', async (req: Request, res: Response) => {
         
         // 如果更新用户名,检查是否已存在
         if (newUserData.username) {
-            const existingUser = await Userinfo.findOne({ 
+            const existingUser = await UserInfo.findOne({ 
                 username: newUserData.username,
                 _id: { $ne: req.params.id }
             });
@@ -84,7 +84,7 @@ router.put('/userinfo/update/:id', async (req: Request, res: Response) => {
         
         // 如果更新手机号,检查是否已存在
         if (newUserData.phoneNumber) {
-            const existingPhone = await Userinfo.findOne({ 
+            const existingPhone = await UserInfo.findOne({ 
                 phoneNumber: newUserData.phoneNumber,
                 _id: { $ne: req.params.id }
             });
@@ -93,7 +93,7 @@ router.put('/userinfo/update/:id', async (req: Request, res: Response) => {
             }
         }
         
-        const updatedUser = await Userinfo.findByIdAndUpdate(
+        const updatedUser = await UserInfo.findByIdAndUpdate(
             req.params.id, 
             newUserData, 
             { new: true }
@@ -114,10 +114,10 @@ router.put('/userinfo/update/:id', async (req: Request, res: Response) => {
 });
 
 // 删除用户信息
-router.delete('/userinfo/delete/:id', async (req: Request, res: Response) => {
+router.delete('/userInfo/delete/:id', async (req: Request, res: Response) => {
     try {
         const userId = req.params.id;
-        const deletedUser = await Userinfo.findByIdAndDelete(userId);
+        const deletedUser = await UserInfo.findByIdAndDelete(userId);
         if (!deletedUser) {
             return sendResponse(res, 404, '用户信息不存在', {});
         }
@@ -133,10 +133,10 @@ router.delete('/userinfo/delete/:id', async (req: Request, res: Response) => {
 });
 
 // 获取单个用户信息
-router.get('/userinfo/get/:id', async (req: Request, res: Response) => {
+router.get('/userInfo/get/:id', async (req: Request, res: Response) => {
     try {
         const userId = req.params.id;
-        const user = await Userinfo.findById(userId);
+        const user = await UserInfo.findById(userId);
         if (!user) {
             return sendResponse(res, 404, '用户信息不存在', {});
         }
@@ -152,10 +152,10 @@ router.get('/userinfo/get/:id', async (req: Request, res: Response) => {
 });
 
 // 根据用户名获取用户信息
-router.get('/userinfo/username/:username', async (req: Request, res: Response) => {
+router.get('/userInfo/username/:username', async (req: Request, res: Response) => {
     try {
         const username = req.params.username;
-        const user = await Userinfo.findOne({ username });
+        const user = await UserInfo.findOne({ username });
         if (!user) {
             return sendResponse(res, 404, '用户信息不存在', {});
         }
@@ -171,9 +171,9 @@ router.get('/userinfo/username/:username', async (req: Request, res: Response) =
 });
 
 // 获取用户信息列表
-router.get('/userinfo/list', async (req: Request, res: Response) => {
+router.get('/userInfo/list', async (req: Request, res: Response) => {
     try {
-        const users = await Userinfo.find();
+        const users = await UserInfo.find();
         
         // 批量移除敏感信息
         const usersResponse = users.map(user => removeSensitiveInfo(user.toObject()));
@@ -186,7 +186,7 @@ router.get('/userinfo/list', async (req: Request, res: Response) => {
 });
 
 // 添加/更新用户地址
-router.post('/userinfo/:id/address', async (req: Request, res: Response) => {
+router.post('/userInfo/:id/address', async (req: Request, res: Response) => {
     try {
         const userId = req.params.id;
         const addressData = req.body;
@@ -199,7 +199,7 @@ router.post('/userinfo/:id/address', async (req: Request, res: Response) => {
             }
         }
         
-        const user = await Userinfo.findById(userId);
+        const user = await UserInfo.findById(userId);
         if (!user) {
             return sendResponse(res, 404, '用户信息不存在', {});
         }
@@ -225,11 +225,11 @@ router.post('/userinfo/:id/address', async (req: Request, res: Response) => {
 });
 
 // 删除用户地址
-router.delete('/userinfo/:id/address/:addressId', async (req: Request, res: Response) => {
+router.delete('/userInfo/:id/address/:addressId', async (req: Request, res: Response) => {
     try {
         const { id: userId, addressId } = req.params;
         
-        const user = await Userinfo.findById(userId);
+        const user = await UserInfo.findById(userId);
         if (!user) {
             return sendResponse(res, 404, '用户信息不存在', {});
         }
@@ -248,11 +248,11 @@ router.delete('/userinfo/:id/address/:addressId', async (req: Request, res: Resp
 });
 
 // 设置默认地址
-router.put('/userinfo/:id/address/:addressId/default', async (req: Request, res: Response) => {
+router.put('/userInfo/:id/address/:addressId/default', async (req: Request, res: Response) => {
     try {
         const { id: userId, addressId } = req.params;
         
-        const user = await Userinfo.findById(userId);
+        const user = await UserInfo.findById(userId);
         if (!user) {
             return sendResponse(res, 404, '用户信息不存在', {});
         }
