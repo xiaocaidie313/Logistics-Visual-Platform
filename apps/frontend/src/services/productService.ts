@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3002/api/merchant';
+const API_BASE_URL = 'http://47.109.143.184:3002/api/merchant';
 
 export interface ProductSKU {
   _id?: string;
