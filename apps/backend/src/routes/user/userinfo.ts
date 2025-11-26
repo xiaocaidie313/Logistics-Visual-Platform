@@ -1,6 +1,6 @@
 import express from 'express';
 import type { Request, Response } from 'express';
-import UserInfo from '../../models/userInfo.js';
+import UserInfo from '../../models/userinfo.js';
 import { sendResponse } from '../../shared/sendresponse.js';
 
 const router = express.Router();

@@ -6,6 +6,12 @@ const orderItemSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  // 识别唯一的商品
+  skuid:{
+    type: String,
+    required: true,
+    unique: true,
+  },
   skuName: {
     type: String,
     required: true,

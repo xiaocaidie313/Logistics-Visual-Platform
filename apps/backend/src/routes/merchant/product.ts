@@ -140,6 +140,10 @@ router.get('/product/filter/category/:category', async (req: Request, res: Respo
 router.get('/product/filter/status/:status', async (req: Request, res: Response) => {
   try {
     const status = req.params.status;
+    if (!status) {
+      sendResponse(res, 400, '状态参数不能为空', {});
+      return;
+    }
     const validStatuses = ['active', 'inactive', 'out_of_stock'];
     
     if (!validStatuses.includes(status)) {
@@ -224,7 +228,7 @@ router.get('/product/search', async (req: Request, res: Response) => {
   try {
     const { keyword } = req.query;
     
-    if (!keyword) {
+    if (!keyword || typeof keyword !== 'string') {
       sendResponse(res, 400, '请提供搜索关键词', {});
       return;
     }

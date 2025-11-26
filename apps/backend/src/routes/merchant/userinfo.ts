@@ -1,7 +1,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import crypto from 'crypto';
-import UserInfo from '../../models/userInfo.js';
+import UserInfo from '../../models/userinfo.js';
 import { sendResponse } from '../../shared/sendresponse.js';
 
 const router = express.Router();
@@ -46,20 +46,11 @@ router.post('/userInfo', async (req: Request, res: Response) => {
         userData.password = hashedPassword;
         userData.salt = salt;
         
-<<<<<<< HEAD
         const newUser = new UserInfo(userData);
         const savedUser = await newUser.save();
         
         // 返回时移除敏感信息
         const userResponse = removeSensitiveInfo(savedUser.toObject());
-=======
-        // 创建
-        const newUser = new Userinfo(userData);
-        const savedUser = await newUser.save();
-        
-        // 返回时移除敏感信息
-        const { password: _, salt: __, ...userResponse } = savedUser.toObject();
->>>>>>> 6f98d4f (配置环境变量规避url暴露)
         
         sendResponse(res, 200, '用户创建成功', userResponse);
     } catch (error: unknown) {
@@ -113,11 +104,7 @@ router.put('/userInfo/update/:id', async (req: Request, res: Response) => {
         }
         
         // 返回时移除敏感信息
-<<<<<<< HEAD
         const userResponse = removeSensitiveInfo(updatedUser.toObject());
-=======
-        const { password: _, salt: __, ...userResponse } = updatedUser.toObject();
->>>>>>> 6f98d4f (配置环境变量规避url暴露)
         
         sendResponse(res, 200, '用户更新成功', userResponse);
     } catch (error: unknown) {
@@ -136,11 +123,7 @@ router.delete('/userInfo/delete/:id', async (req: Request, res: Response) => {
         }
         
         // 返回时移除敏感信息
-<<<<<<< HEAD
         const userResponse = removeSensitiveInfo(deletedUser.toObject());
-=======
-        const { password: _, salt: __, ...userResponse } = deletedUser.toObject();
->>>>>>> 6f98d4f (配置环境变量规避url暴露)
         
         sendResponse(res, 200, '用户删除成功', userResponse);
     } catch (error: unknown) {
@@ -159,11 +142,7 @@ router.get('/userInfo/get/:id', async (req: Request, res: Response) => {
         }
         
         // 返回时移除敏感信息
-<<<<<<< HEAD
         const userResponse = removeSensitiveInfo(user.toObject());
-=======
-        const { password: _, salt: __, ...userResponse } = user.toObject();
->>>>>>> 6f98d4f (配置环境变量规避url暴露)
         
         sendResponse(res, 200, 'Success', userResponse);
     } catch (error: unknown) {
@@ -182,11 +161,7 @@ router.get('/userInfo/username/:username', async (req: Request, res: Response) =
         }
         
         // 返回时移除敏感信息
-<<<<<<< HEAD
         const userResponse = removeSensitiveInfo(user.toObject());
-=======
-        const { password: _, salt: __, ...userResponse } = user.toObject();
->>>>>>> 6f98d4f (配置环境变量规避url暴露)
         
         sendResponse(res, 200, 'Success', userResponse);
     } catch (error: unknown) {
@@ -201,14 +176,7 @@ router.get('/userInfo/list', async (req: Request, res: Response) => {
         const users = await UserInfo.find();
         
         // 批量移除敏感信息
-<<<<<<< HEAD
         const usersResponse = users.map(user => removeSensitiveInfo(user.toObject()));
-=======
-        const usersResponse = users.map(user => {
-            const { password: _, salt: __, ...userObj } = user.toObject();
-            return userObj;
-        });
->>>>>>> 6f98d4f (配置环境变量规避url暴露)
         
         sendResponse(res, 200, 'Success', usersResponse);
     } catch (error: unknown) {
@@ -247,11 +215,7 @@ router.post('/userInfo/:id/address', async (req: Request, res: Response) => {
         user.addresses.push(addressData);
         await user.save();
         
-<<<<<<< HEAD
         const userResponse = removeSensitiveInfo(user.toObject());
-=======
-        const { password: _, salt: __, ...userResponse } = user.toObject();
->>>>>>> 6f98d4f (配置环境变量规避url暴露)
         
         sendResponse(res, 200, '地址添加成功', userResponse);
     } catch (error: unknown) {
@@ -274,11 +238,7 @@ router.delete('/userInfo/:id/address/:addressId', async (req: Request, res: Resp
         user.addresses.pull(addressId);
         await user.save();
         
-<<<<<<< HEAD
         const userResponse = removeSensitiveInfo(user.toObject());
-=======
-        const { password: _, salt: __, ...userResponse } = user.toObject();
->>>>>>> 6f98d4f (配置环境变量规避url暴露)
         
         sendResponse(res, 200, '地址删除成功', userResponse);
     } catch (error: unknown) {
@@ -314,11 +274,7 @@ router.put('/userInfo/:id/address/:addressId/default', async (req: Request, res:
         
         await user.save();
         
-<<<<<<< HEAD
         const userResponse = removeSensitiveInfo(user.toObject());
-=======
-        const { password: _, salt: __, ...userResponse } = user.toObject();
->>>>>>> 6f98d4f (配置环境变量规避url暴露)
         
         sendResponse(res, 200, '默认地址设置成功', userResponse);
     } catch (error: unknown) {

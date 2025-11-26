@@ -121,6 +121,10 @@ router.put('/order/switch/status/:id', async (req: Request, res: Response) => {
 router.get('/order/filter/:status', async (req: Request, res: Response) => {
   try {
     const status = req.params.status;
+    if (!status) {
+      sendResponse(res, 400, '状态参数不能为空', {});
+      return;
+    }
     const validStatuses = ['pending', 'paid', 'shipped', 'confirmed', 'delivered', 'cancelled', 'refunded'];
     
     if (!validStatuses.includes(status)) {
