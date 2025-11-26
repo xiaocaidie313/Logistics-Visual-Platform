@@ -19,7 +19,8 @@
   "packageManager": "npm@11.4.2",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "platform/*"
   ],
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",

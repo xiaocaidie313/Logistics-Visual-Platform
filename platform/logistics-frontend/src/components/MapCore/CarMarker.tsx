@@ -30,7 +30,7 @@ const CarMarker: React.FC<CarMarkerProps> = ({ map, AMap, position }) => {
         });
         markerRef.current = marker;
 
-        // 🔴 [核心] 组件卸载时，停止动画并移除 Marker
+        // 组件卸载时，停止动画并移除 Marker
         return () => {
             if (marker) {
                 marker.stopMove(); // 先停止移动

@@ -1,24 +1,28 @@
-// 定义后端返回的单个物流节点日志
 export interface TrackLog {
     time: string;
     location: string;
     description: string;
     status: string;
+    operator?: string;
 }
 
-// 定义后端返回的完整订单结构
 export interface OrderData {
     id: string;
     orderId: string;
-    logisticsStatus: string; // 'pending' | 'shipped' | 'delivered'
+    logisticsCompany: string; // 必须有
+    logisticsNumber: string;  // 必须有
+    logisticsStatus: string;
     sendAddress: string;
     userAddress: string;
-    path: number[][]; // 完整路径 [lng, lat][]
+    province?: string;
+    path: number[][];
     currentCoords: number[];
-    tracks: TrackLog[]; // 物流时间轴日志
+    startCoords?: number[];
+    endCoords?: number[];
+    transitStops?: any[];
+    tracks: TrackLog[];
 }
 
-// ECharts 图表数据结构
 export interface ProvinceStat {
     name: string;
     value: number;
