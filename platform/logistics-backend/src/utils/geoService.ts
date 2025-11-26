@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// 🔴 请替换为你申请的【Web服务】类型的 Key
+// 替换为你申请的【Web服务】类型的 Key
 const AMAP_WEB_KEY = '2ac03f2b8d39805cd8a52c1cdd6162ae';
 
 // 定义全国核心中转枢纽 (Hubs)
@@ -112,7 +112,7 @@ export const extractProvince = (address: string): string => {
     return '其他';
 };
 
-// 🟢 [核心修改]：planRoute 使用 getDrivingRoute 生成真实道路轨迹
+// planRoute 使用 getDrivingRoute 生成真实道路轨迹
 export const planRoute = async (startAddr: string, endAddr: string) => {
     const startCoords = await getCoordsByAddress(startAddr);
     const endCoords = await getCoordsByAddress(endAddr);

@@ -43,7 +43,7 @@ const startSimulation = (track: ITrack) => {
     // 获取规划好的中转站列表 (如果没有则为空数组)
     const transitStops = track.transitStops || [];
 
-    // --- 🔴 核心修复开始：计算断点续传的 index ---
+    // --- 计算断点续传的 index ---
     let startIndex = 0;
 
     // 如果数据库里已经有当前坐标，尝试在路径中找到它
@@ -65,7 +65,7 @@ const startSimulation = (track: ITrack) => {
 
     // 将 index 初始化为找到的断点，而不是 0
     let index = startIndex;
-    // --- 🔴 核心修复结束 ---
+    // --- 核心修复结束 ---
 
     console.log(`[仿真启动] 订单 ${track.id} 开始移动，总步数: ${totalSteps}, 中转站数: ${transitStops.length}`);
 
@@ -169,7 +169,7 @@ app.post('/api/tracks/create', async (req, res) => {
             endCoords,
             currentCoords: startCoords,
             path,
-            transitStops, // 🟢 存入数据库
+            transitStops, //  存入数据库
             logisticsStatus: 'shipped',
             // 初始化一条轨迹记录
             tracks: [{

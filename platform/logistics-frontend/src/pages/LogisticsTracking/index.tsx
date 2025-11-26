@@ -23,7 +23,7 @@ const LogisticsTracking: React.FC = () => {
     const [wsStatus, setWsStatus] = useState<string>('未连接');
 
     const wsRef = useRef<WebSocket | null>(null);
-    // 🔴 [核心修复 1]：使用 Ref 记录当前正在查看的订单 ID
+    // 使用 Ref 记录当前正在查看的订单 ID
     // Ref 的值改变不会触发重渲染，但能保证在 WebSocket 回调中读到最新值
     const activeOrderIdRef = useRef<string | null>(null);
 
@@ -54,7 +54,7 @@ const LogisticsTracking: React.FC = () => {
     }, []);
 
     const handleWsMessage = (data: any) => {
-        // 🔴 [核心修复 2]：WebSocket 消息过滤器
+        // WebSocket 消息过滤器
         // 如果收到的消息 ID 不等于当前正在查看的 ID，直接忽略！
         // 这样就彻底杜绝了“上一单的数据干扰这一单”的问题
         if (!data.id || data.id !== activeOrderIdRef.current) {
@@ -97,7 +97,7 @@ const LogisticsTracking: React.FC = () => {
             setCurrentPos(null);
             setLogs([]);
 
-            // 🔴 [核心修复 3]：更新当前活跃 ID
+            // 更新当前活跃 ID
             activeOrderIdRef.current = id;
         }
 
@@ -146,7 +146,7 @@ const LogisticsTracking: React.FC = () => {
         setLoading(true);
         const mockId = `SF${Math.floor(Math.random() * 10000)}`;
 
-        // 🔴 [核心修复 4]：创建时也立即更新活跃 ID
+        // 创建时也立即更新活跃 ID
         activeOrderIdRef.current = mockId;
 
         const demoPayload = {

@@ -39,7 +39,7 @@ const PathLine: React.FC<PathLineProps> = ({ map, AMap, path, currentPosition })
 
         map.setFitView([bgLine]);
 
-        // 🔴 [核心] 组件卸载时，必须从地图上移除这些线
+        // 组件卸载时，必须从地图上移除这些线
         return () => {
             if (bgLine) {
                 bgLine.setMap(null); // 从地图移除
