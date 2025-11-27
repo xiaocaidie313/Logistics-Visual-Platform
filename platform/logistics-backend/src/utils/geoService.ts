@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const AMAP_WEB_KEY = '2ac03f2b8d39805cd8a52c1cdd6162ae';
 
-// 核心中转枢纽库 (用于沿途扫描)
+// 核心中转枢纽库
 const HUBS: Record<string, [number, number]> = {
     '华北转运中心(北京)': [116.45, 39.95],
     '华东转运中心(上海)': [121.40, 31.20],
@@ -11,7 +11,6 @@ const HUBS: Record<string, [number, number]> = {
     '西南转运中心(成都)': [104.05, 30.65],
     '西北转运中心(西安)': [108.95, 34.25],
     '东北转运中心(沈阳)': [123.45, 41.80],
-    // 可以补充更多核心节点，增加扫描命中的概率
     '华东区域枢纽(南京)': [118.78, 32.07],
     '华东区域枢纽(杭州)': [120.19, 30.26],
     '华中区域枢纽(长沙)': [112.93, 28.23],
@@ -19,12 +18,10 @@ const HUBS: Record<string, [number, number]> = {
     '华南区域枢纽(深圳)': [114.05, 22.54]
 };
 
-// 辅助：计算欧氏距离 (单位：度，1度≈111km)
 const getDist = (p1: number[], p2: number[]) => {
     return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
 };
 
-// 辅助：直线兜底
 const generateLine = (start: number[], end: number[], steps: number) => {
     const path = [];
     for (let i = 0; i <= steps; i++) {
@@ -35,7 +32,14 @@ const generateLine = (start: number[], end: number[], steps: number) => {
     return path;
 };
 
-// 获取真实驾车路线
+// 全局统一抽稀函数
+const downsamplePath = (path: number[][], targetCount: number) => {
+    const total = path.length;
+    if (total <= targetCount) return path;
+    const step = Math.ceil(total / targetCount);
+    return path.filter((_, index) => index === 0 || index === total - 1 || index % step === 0);
+};
+
 const getDrivingRoute = async (start: number[], end: number[], strategy = 0): Promise<number[][]> => {
     try {
         const originStr = `${start[0].toFixed(6)},${start[1].toFixed(6)}`;
@@ -53,13 +57,7 @@ const getDrivingRoute = async (start: number[], end: number[], strategy = 0): Pr
                 });
                 fullPath.push(...points);
             }
-
-            // 抽稀：控制总点数在 150 左右，保证仿真速度
-            const totalPoints = fullPath.length;
-            const TARGET_COUNT = 150;
-            if (totalPoints <= TARGET_COUNT) return fullPath;
-            const step = Math.ceil(totalPoints / TARGET_COUNT);
-            return fullPath.filter((_, index) => index === 0 || index === totalPoints - 1 || index % step === 0);
+            return fullPath; // 返回原始点，后续统一抽稀
         }
         return generateLine(start, end, 50);
     } catch (error) {
@@ -86,17 +84,12 @@ export const extractProvince = (address: string): string => {
     return '其他';
 };
 
-// 🟢 [新增算法]：扫描路径，自动识别经过的中转站
 const scanPathForHubs = (path: number[][]) => {
     const detectedStops: { stepIndex: number, hubName: string }[] = [];
     const visitedHubs = new Set<string>();
-
-    // 遍历路径上的每个点
     path.forEach((point, index) => {
-        // 检查该点是否在某个 Hub 的附近 (阈值 0.5度 ≈ 50km)
         for (const [hubName, hubCoords] of Object.entries(HUBS)) {
-            if (visitedHubs.has(hubName)) continue; // 避免同一个 Hub 重复添加
-
+            if (visitedHubs.has(hubName)) continue;
             const dist = getDist(point, hubCoords);
             if (dist < 0.5) {
                 detectedStops.push({ stepIndex: index, hubName });
@@ -107,21 +100,19 @@ const scanPathForHubs = (path: number[][]) => {
     return detectedStops;
 };
 
-// 🟢 [核心逻辑重构]
 export const planRoute = async (startAddr: string, endAddr: string) => {
     const startCoords = await getCoordsByAddress(startAddr);
     const endCoords = await getCoordsByAddress(endAddr);
     const directDist = getDist(startCoords, endCoords);
 
-    let fullPath: number[][] = [];
+    let rawFullPath: number[][] = [];
 
-    // 1. 短途 (<200km): 直接规划
+    // 1. 收集路径点
     if (directDist < 2.0) {
-        fullPath = await getDrivingRoute(startCoords, endCoords);
-    }
-    // 2. 长途: 智能规划 + 防绕路
-    else {
-        // A. 寻找最近的 StartHub 和 EndHub
+        // 短途：同城或周边城市
+        rawFullPath = await getDrivingRoute(startCoords, endCoords);
+    } else {
+        // 长途：跨区域中转
         let startHubName = '', endHubName = '';
         let startHubCoords = startCoords, endHubCoords = endCoords;
         let minS = Infinity, minE = Infinity;
@@ -135,38 +126,36 @@ export const planRoute = async (startAddr: string, endAddr: string) => {
             if (d < minE) { minE = d; endHubCoords = coords; endHubName = name; }
         }
 
-        // B. [防绕路算法] 检测 EndHub 是否导致绕路
-        // 计算：StartHub -> End (直达距离) vs StartHub -> EndHub -> End (中转距离)
+        // 防绕路
         const distDirect = getDist(startHubCoords, endCoords);
         const distViaHub = getDist(startHubCoords, endHubCoords) + getDist(endHubCoords, endCoords);
-
-        // 如果中转距离比直达距离多出 30% 以上，或者 EndHub 实际上离终点比 StartHub 还远
-        // 则判定为绕路，取消 EndHub，改为 StartHub 直达终点
         if (startHubName !== endHubName && (distViaHub > distDirect * 1.3 || getDist(endHubCoords, endCoords) > distDirect)) {
-            console.log(`[路由优化] 检测到绕路 (${endHubName})，已自动优化为直达路线`);
             endHubName = startHubName;
             endHubCoords = startHubCoords;
         }
 
-        // C. 构建分段路线
-        // 第一段：起点 -> StartHub
         const segment1 = await getDrivingRoute(startCoords, startHubCoords);
-        fullPath.push(...segment1);
+        rawFullPath.push(...segment1);
 
-        // 第二段：StartHub -> EndHub (如果不同)
         if (startHubName !== endHubName) {
-            const segment2 = await getDrivingRoute(startHubCoords, endHubCoords, 2); // 距离优先
-            fullPath.push(...segment2);
+            const segment2 = await getDrivingRoute(startHubCoords, endHubCoords, 2);
+            rawFullPath.push(...segment2);
         }
 
-        // 第三段：EndHub -> 终点
         const segment3 = await getDrivingRoute(endHubCoords, endCoords);
-        fullPath.push(...segment3);
+        rawFullPath.push(...segment3);
     }
 
-    // 🟢 [关键步骤]：扫描生成的完整路径，自动识别沿途经过的所有中转站
-    // 这样即使我们跳过了某些 Hub，或者经过了武汉但没把它设为端点，这里也能识别出来
-    const transitStops = scanPathForHubs(fullPath);
+    // 2. 全局抽稀
+    const finalPath = downsamplePath(rawFullPath, 150);
 
-    return { startCoords, endCoords, path: fullPath, transitStops };
+    // 3. 🟢 [关键修复]：中转站扫描策略
+    // 只有当距离较远（> 2.0，约200公里）时，才扫描沿途的中转站
+    // 如果是同城短途（< 2.0），强制清空中转列表，不再触发“到达XX枢纽”的日志
+    let transitStops: { stepIndex: number, hubName: string }[] = [];
+    if (directDist >= 2.0) {
+        transitStops = scanPathForHubs(finalPath);
+    }
+
+    return { startCoords, endCoords, path: finalPath, transitStops };
 };
