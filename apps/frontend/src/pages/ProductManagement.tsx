@@ -459,7 +459,7 @@ const ProductManagement: React.FC = () => {
         .product-table th {
           background: #f5f5f5;
           padding: 16px;
-          text-align: left;
+          text-align: middle;
           font-weight: 600;
           color: #333;
           border-bottom: 2px solid #e0e0e0;
@@ -497,6 +497,7 @@ const ProductManagement: React.FC = () => {
         .action-buttons {
           display: flex;
           gap: 8px;
+          justify-content: center;
         }
 
         .edit-btn,
