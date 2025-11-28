@@ -149,7 +149,7 @@ export const planRoute = async (startAddr: string, endAddr: string) => {
     // 2. 全局抽稀
     const finalPath = downsamplePath(rawFullPath, 150);
 
-    // 3. 🟢 [关键修复]：中转站扫描策略
+    // 3.中转站扫描策略
     // 只有当距离较远（> 2.0，约200公里）时，才扫描沿途的中转站
     // 如果是同城短途（< 2.0），强制清空中转列表，不再触发“到达XX枢纽”的日志
     let transitStops: { stepIndex: number, hubName: string }[] = [];

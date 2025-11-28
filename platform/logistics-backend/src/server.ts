@@ -69,7 +69,7 @@ const startSimulation = (track: ITrack) => {
                 operator: '快递员小王'
             };
 
-            // 🟢 [核心修复] 使用 findOneAndUpdate 原子更新，避开版本冲突
+            // 使用 findOneAndUpdate 原子更新，避开版本冲突
             await TrackInfo.findOneAndUpdate(
                 { id: track.id },
                 {
@@ -111,7 +111,7 @@ const startSimulation = (track: ITrack) => {
         // --- 阶段 C: 实时移动 ---
         const currentPos = path[index];
 
-        // 🟢 [核心修复] 只更新坐标，不读取整个文档再保存，极大降低冲突概率
+        // 更新坐标，不读取整个文档再保存，极大降低冲突概率
         if (index % 5 === 0) {
             await TrackInfo.updateOne(
                 { id: track.id },
