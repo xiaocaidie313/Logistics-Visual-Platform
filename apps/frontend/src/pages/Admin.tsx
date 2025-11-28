@@ -10,7 +10,7 @@ const { Header, Sider, Content } = Layout;
 
 type MenuKey = 'orders' | 'users' | 'products' | 'dashboard';
 
-const MerchantDashboard: React.FC = () => {
+const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [selectedMenu, setSelectedMenu] = useState<MenuKey>('products');
   const [userInfo, setUserInfo] = useState<any>(null);
@@ -20,20 +20,20 @@ const MerchantDashboard: React.FC = () => {
     const loggedIn = localStorage.getItem('isLoggedIn');
     const user = localStorage.getItem('userInfo');
     if (loggedIn === 'true' && user) {
-      //每次remderd都会被预先加载为false所以每次都需要重新设置为true
       setUserInfo(JSON.parse(user));
-    }else{
+    } else {
       setUserInfo(null);
       // 返回登录页面 未登录
       navigate('/login');
     }
-  }, []);
+  }, [navigate]);
 
   // 登出
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('userInfo');
     setUserInfo(null);
+    navigate('/login');
   };
 
   const menuItems = [
@@ -80,13 +80,13 @@ const MerchantDashboard: React.FC = () => {
         fontWeight: 600,
       }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <ShoppingOutlined style={{ marginRight: 12, fontSize: 24 }} />
-          电商管理平台 - 商家端
+          <AppstoreOutlined style={{ marginRight: 12, fontSize: 24 }} />
+          电商管理平台 - 管理员端
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {userInfo && (
             <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)' }}>
-              {userInfo.username}
+              管理员: {userInfo.username}
             </span>
           )}
           <Button
@@ -114,7 +114,7 @@ const MerchantDashboard: React.FC = () => {
         </Sider>
         <Layout style={{ padding: 0 }}>
           <Content style={{ margin: 0, minHeight: 280 }}>
-            {/* 渲染组件  用函数渲染组件！！ */}
+            {/* 渲染组件 */}
             {renderContent()}
           </Content>
         </Layout>
@@ -123,5 +123,4 @@ const MerchantDashboard: React.FC = () => {
   );
 };
 
-export default MerchantDashboard;
-
+export default AdminDashboard;

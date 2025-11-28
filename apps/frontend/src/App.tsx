@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from "./pages/Login";
-import MerchantDashboard from "./pages/Merchant";
+import AdminDashboard from "./pages/Admin";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./App.css";
 
@@ -10,12 +10,12 @@ function App() {
       <Routes>
         {/* 登录页面 */}
         <Route path="/login" element={<Login />} />
-        {/* 商家端 */}
+        {/* 管理员端 */}
         <Route
-          path="/merchant"
+          path="/admin"
           element={
             <ProtectedRoute>
-              <MerchantDashboard />
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />
