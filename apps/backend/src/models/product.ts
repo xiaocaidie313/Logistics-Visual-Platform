@@ -65,6 +65,12 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    merchantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'UserInfo',
+      required: true,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -74,6 +80,7 @@ const productSchema = new mongoose.Schema(
 // 索引优化
 productSchema.index({ category: 1, status: 1 });
 productSchema.index({ salesCount: -1 });
+productSchema.index({ merchantId: 1 });
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;

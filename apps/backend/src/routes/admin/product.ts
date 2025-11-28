@@ -9,6 +9,13 @@ const router = express.Router();
 router.post('/product', async (req: Request, res: Response) => {
   try {
     const productData = req.body;
+    
+    // 确保包含 merchantId
+    if (!productData.merchantId) {
+      sendResponse(res, 400, '必须指定商家ID', {});
+      return;
+    }
+
     const newProduct = new Product(productData);
     const savedProduct = await newProduct.save();
     sendResponse(res, 200, 'Success', savedProduct);
@@ -85,13 +92,15 @@ router.get('/product/list', async (req: Request, res: Response) => {
       category, 
       status, 
       sortBy = 'createdAt', 
-      sortOrder = 'desc' 
+      sortOrder = 'desc',
+      merchantId
     } = req.query;
     
     // 构建查询条件
     const query: any = {};
     if (category) query.category = category;
     if (status) query.status = status;
+    if (merchantId) query.merchantId = merchantId;
     
     // 排序
     const sort: any = {};

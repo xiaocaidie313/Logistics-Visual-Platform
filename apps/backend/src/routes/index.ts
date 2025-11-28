@@ -1,6 +1,6 @@
 import express from 'express';
 import user from './user/index.js';
-import merchant from './merchant/index.js';
+import merchant from './admin/index.js';
 import login from './login/index.js'
 
 const router = express.Router();
