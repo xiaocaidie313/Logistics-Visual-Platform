@@ -9,6 +9,7 @@ import {
   searchProducts,
   getProductStatistics,
 } from '../services/productService';
+import { getUserList, User } from '../services/userService';
 import ProductFormModal from '../components/ProductFormModal';
 
 const ProductManagement: React.FC = () => {
@@ -19,6 +20,7 @@ const ProductManagement: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterMerchant, setFilterMerchant] = useState('');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -26,11 +28,35 @@ const ProductManagement: React.FC = () => {
     totalPages: 0
   });
   const [statistics, setStatistics] = useState<any>(null);
+  const [merchants, setMerchants] = useState<User[]>([]); // 存储商家列表
+  const [merchantMap, setMerchantMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchMerchants();
+  }, []);
 
   useEffect(() => {
     fetchProducts();
     fetchStatistics();
-  }, [pagination.page, filterCategory, filterStatus]);
+  }, [pagination.page, filterCategory, filterStatus, filterMerchant]);
+
+  const fetchMerchants = async () => {
+    try {
+      const response = await getUserList();
+      if (response.code === 200) {
+        const merchantList = response.data.filter(user => user.role === 'merchant');
+        setMerchants(merchantList);
+        
+        const map: Record<string, string> = {};
+        merchantList.forEach(m => {
+          if (m._id) map[m._id] = m.username;
+        });
+        setMerchantMap(map);
+      }
+    } catch (error) {
+      console.error('获取商家列表失败:', error);
+    }
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -42,6 +68,7 @@ const ProductManagement: React.FC = () => {
 
       if (filterCategory) params.category = filterCategory;
       if (filterStatus) params.status = filterStatus;
+      if (filterMerchant) params.merchantId = filterMerchant;
 
       const response = await getProductList(params);
       if (response.code === 200) {
@@ -213,6 +240,18 @@ const ProductManagement: React.FC = () => {
 
         <div className="filters">
           <select
+            value={filterMerchant}
+            onChange={(e) => setFilterMerchant(e.target.value)}
+          >
+            <option value="">所有商家</option>
+            {merchants.map(merchant => (
+              <option key={merchant._id} value={merchant._id}>
+                {merchant.username}
+              </option>
+            ))}
+          </select>
+
+          <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
           >
@@ -249,6 +288,7 @@ const ProductManagement: React.FC = () => {
               <thead>
                 <tr>
                   <th>商品名称</th>
+                  <th>商家</th>
                   <th>分类</th>
                   <th>SKU数量</th>
                   <th>状态</th>
@@ -267,6 +307,11 @@ const ProductManagement: React.FC = () => {
                           <small>{product.description}</small>
                         )}
                       </div>
+                    </td>
+                    <td>
+                      {product.merchantId && merchantMap[product.merchantId] 
+                        ? merchantMap[product.merchantId] 
+                        : (product.merchantId || '-')}
                     </td>
                     <td>{product.category}</td>
                     <td>{product.skus.length}</td>
@@ -342,6 +387,7 @@ const ProductManagement: React.FC = () => {
       <ProductFormModal
         visible={modalVisible}
         product={currentProduct}
+        merchants={merchants}
         onClose={() => {
           setModalVisible(false);
           setCurrentProduct(null);
