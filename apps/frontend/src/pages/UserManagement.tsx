@@ -116,6 +116,19 @@ const UserManagement: React.FC = () => {
     }
   };
 
+  const renderRole = (role?: string) => {
+    switch (role) {
+      case 'admin':
+        return <Tag color="red">管理员</Tag>;
+      case 'merchant':
+        return <Tag color="blue">商家</Tag>;
+      case 'customer':
+        return <Tag color="green">顾客</Tag>;
+      default:
+        return <Tag color="default">未设置</Tag>;
+    }
+  };
+
   // 格式化地址显示
   const formatAddress = (addresses: User['addresses']) => {
     if (!addresses || addresses.length === 0) {
@@ -151,6 +164,20 @@ const UserManagement: React.FC = () => {
       dataIndex: 'phoneNumber',
       key: 'phoneNumber',
       width: 150,
+    },
+    {
+      title: '角色',
+      dataIndex: 'role',
+      key: 'role',
+      width: 100,
+      align: 'center',
+      render: (role) => renderRole(role),
+      filters: [
+        { text: '管理员', value: 'admin' },
+        { text: '商家', value: 'merchant' },
+        { text: '顾客', value: 'customer' },
+      ],
+      onFilter: (value, record) => record.role === value,
     },
     {
       title: '性别',

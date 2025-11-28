@@ -23,6 +23,7 @@ export interface User {
   phoneNumber: string;
   password?: string;  // 创建/更新时需要
   gender?: 'male' | 'female' | 'other';
+  role?: 'admin' | 'merchant' | 'customer';
   addresses: Address[];
   createdAt?: string;
   updatedAt?: string;
