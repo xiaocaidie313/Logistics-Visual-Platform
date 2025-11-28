@@ -13,7 +13,7 @@ const verifyPassword = (password: string, hashedPassword: string, salt: string):
 //登入
 router.post('/login', async (req: Request, res: Response) => {
     try {
-        const { username, password, phoneNumber } = req.body;
+        const { username, password, phoneNumber, role } = req.body;
         
         // 验证必填字段
         if (!password || (!username && !phoneNumber)) {
@@ -27,7 +27,9 @@ router.post('/login', async (req: Request, res: Response) => {
         if (!user) {
             return sendResponse(res, 401, '用户名或密码错误', {});
         }
-
+        if(role && role !== user.role) {
+            return sendResponse(res, 401, '用户角色错误', {});
+        }
         // 验证密码 使用用户存储的salt 来验证
         if (!user.salt || !user.password) {
             return sendResponse(res, 401, '用户数据异常，请联系管理员', {});
