@@ -4,8 +4,7 @@ import mongoose from 'mongoose';
 const skuSchema = new mongoose.Schema({
   skuid:{
     type: String,
-    required: true,
-    unique: true,
+    required: false
   },
   skuName: {
     type: String,
@@ -64,6 +63,12 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    merchantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'UserInfo',
+      required: true,
+      index: true,
     },
   },
   {

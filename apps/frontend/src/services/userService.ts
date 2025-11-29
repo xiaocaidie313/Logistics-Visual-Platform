@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3002/api/merchant';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // 地址接口
 export interface Address {
@@ -23,6 +23,7 @@ export interface User {
   phoneNumber: string;
   password?: string;  // 创建/更新时需要
   gender?: 'male' | 'female' | 'other';
+  role?: 'admin' | 'merchant' | 'customer';
   addresses: Address[];
   createdAt?: string;
   updatedAt?: string;

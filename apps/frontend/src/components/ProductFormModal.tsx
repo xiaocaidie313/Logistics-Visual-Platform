@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, Button, Space, InputNumber, message } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { Product } from '../services/productService';
+import type { User } from '../services/userService';
 
 interface ProductFormModalProps {
   visible: boolean;
   product: Product | null;
+  merchants: User[];
   onClose: () => void;
   onSubmit: (productData: Partial<Product>) => void;
 }
@@ -20,6 +22,7 @@ interface SKU {
 const ProductFormModal: React.FC<ProductFormModalProps> = ({
   visible,
   product,
+  merchants,
   onClose,
   onSubmit,
 }) => {
@@ -31,6 +34,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       if (product) {
         form.setFieldsValue({
           productName: product.productName,
+          merchantId: product.merchantId,
           category: product.category,
           description: product.description,
           status: product.status,
@@ -83,6 +87,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
       const productData: Partial<Product> = {
         productName: values.productName,
+        merchantId: values.merchantId,
         category: values.category,
         description: values.description,
         status: values.status,
@@ -183,6 +188,20 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           ]}
         >
           <Input placeholder="请输入商品名称" />
+        </Form.Item>
+
+        <Form.Item
+          name="merchantId"
+          label="所属商家"
+          rules={[{ required: true, message: '请选择所属商家' }]}
+        >
+          <Select placeholder="请选择所属商家" showSearch optionFilterProp="children">
+            {merchants.map((merchant) => (
+              <Select.Option key={merchant._id} value={merchant._id}>
+                {merchant.username}
+              </Select.Option>
+            ))}
+          </Select>
         </Form.Item>
 
         <Form.Item
