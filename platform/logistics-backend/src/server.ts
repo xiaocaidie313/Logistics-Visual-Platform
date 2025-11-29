@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import TrackInfo, { ITrack } from './models/Track';
-import { planRoute, extractProvince, extractDistrictHub, solveTSP, getDrivingRoute } from './utils/geoService';
+import { planRoute, extractProvince, extractDistrictHub, solveTSP, getDrivingRoute, generateLine } from './utils/geoService';
 
 const app = express();
 const PORT = 3003;
@@ -17,6 +17,7 @@ mongoose.connect('mongodb://lxy:123lxy@47.109.143.184:27017/logistics')
 
 const activeSimulations = new Map<string, NodeJS.Timeout>();
 const connectedClients = new Set<WebSocket>();
+const dispatchingHubs = new Set<string>();
 
 const broadcast = (data: any) => {
     connectedClients.forEach(client => {
@@ -28,24 +29,48 @@ const broadcast = (data: any) => {
 
 // --- 🚚 仿真引擎 ---
 const startSimulation = (track: ITrack) => {
-    if (activeSimulations.has(track.id)) return;
+    // 1. 清理旧定时器，防止多重驱动
+    if (activeSimulations.has(track.id)) {
+        clearInterval(activeSimulations.get(track.id));
+        activeSimulations.delete(track.id);
+    }
+
+    // 等待状态不跑
     if (track.logisticsStatus === 'waiting_for_delivery') return;
 
-    const path = track.path;
+    // 深拷贝路径
+    const path = JSON.parse(JSON.stringify(track.path));
     const totalSteps = path.length;
     const processedStops = new Set<string>();
 
+    // 2. 🟢 [核心修复] 智能断点续传
     let index = 0;
     if (track.currentCoords && track.currentCoords.length === 2) {
         let minD = Infinity;
-        path.forEach((p, i) => {
+        let foundIndex = 0;
+
+        // 遍历寻找最近的点
+        for (let i = 0; i < path.length; i++) {
+            const p = path[i];
             const d = Math.sqrt(Math.pow(p[0] - track.currentCoords[0], 2) + Math.pow(p[1] - track.currentCoords[1], 2));
-            if (d < minD) { minD = d; index = i; }
-        });
-        if (index >= totalSteps - 1 && track.logisticsStatus !== 'delivering') index = 0;
+            if (d < minD) {
+                minD = d;
+                foundIndex = i;
+            }
+        }
+
+        index = foundIndex;
+
+        // 🟢 [保底逻辑]：
+        // 如果状态是 delivering (派送中)，但计算出的 index 已经是终点了，说明匹配错误（可能匹配到了重叠路径的末尾）
+        // 此时强制重置为 0，让小车从头开始跑，确保用户能看到过程，而不是卡在终点
+        if (track.logisticsStatus === 'delivering' && index >= totalSteps - 5) {
+            console.log(`[仿真修正] ${track.id} 派送中但进度已满，重置为起点`);
+            index = 0;
+        }
     }
 
-    console.log(`[仿真启动] ${track.id} | 状态: ${track.logisticsStatus} | 步数: ${totalSteps}`);
+    console.log(`[仿真启动] ${track.id} | 状态: ${track.logisticsStatus} | 进度: ${index}/${totalSteps}`);
 
     const timer = setInterval(async () => {
         // --- 1. 到达终点 ---
@@ -54,6 +79,7 @@ const startSimulation = (track: ITrack) => {
             activeSimulations.delete(track.id);
             const finalPoint = path[totalSteps - 1];
 
+            // 📍 阶段A: 到达站点
             if (track.logisticsStatus === 'shipped') {
                 const now = new Date();
                 const hubName = track.districtHub || "区域站点";
@@ -81,11 +107,12 @@ const startSimulation = (track: ITrack) => {
                 broadcast({ type: 'STATUS_UPDATE', id: track.id, status: 'waiting_for_delivery', newLog: log });
                 checkAndDispatch(track.districtHub);
             }
+            // 📍 阶段B: 签收
             else if (track.logisticsStatus === 'delivering') {
                 const log = {
                     time: new Date(),
-                    location: track.userAddress,
-                    description: '已签收，感谢您的使用',
+                    location: track.userAddress, // 🟢 确保这里取的是具体的收货地址
+                    description: `已在【${track.userAddress}】签收，感谢您的使用`,
                     status: 'delivered',
                     operator: '快递员'
                 };
@@ -97,17 +124,17 @@ const startSimulation = (track: ITrack) => {
                     }
                 );
                 broadcast({ type: 'STATUS_UPDATE', id: track.id, status: 'delivered', newLog: log });
+                console.log(`[签收] ${track.id} 结束`);
             }
             return;
         }
 
-        // --- 2. 中转站检测 ---
+        // --- 2. 检测中转站 ---
         if (track.logisticsStatus === 'shipped' && track.transitStops && track.transitStops.length > 0) {
             const stop = track.transitStops.find(s => Math.abs(s.stepIndex - index) <= 3);
             if (stop && !processedStops.has(stop.hubName)) {
                 const currentDoc = await TrackInfo.findOne({ id: track.id });
-                const exists = currentDoc?.tracks.some(t => t.location === stop.hubName);
-                if (!exists) {
+                if (!currentDoc?.tracks.some(t => t.location === stop.hubName)) {
                     const hubLog = {
                         time: new Date(),
                         location: stop.hubName,
@@ -130,13 +157,15 @@ const startSimulation = (track: ITrack) => {
         broadcast({ type: 'LOCATION_UPDATE', id: track.id, position: currentPos });
         index++;
 
-    }, 1000);
+    }, 1000); // 1秒1步
 
     activeSimulations.set(track.id, timer);
 };
 
-// --- 调度器 ---
+// --- 🧠 调度器 ---
 const checkAndDispatch = async (hubName: string) => {
+    if (dispatchingHubs.has(hubName)) return;
+
     const orders = await TrackInfo.find({
         districtHub: hubName,
         logisticsStatus: 'waiting_for_delivery'
@@ -152,63 +181,102 @@ const checkAndDispatch = async (hubName: string) => {
 
     if (isFull || isTimeout) {
         console.log(`[调度] ${hubName} 触发派送 (${orders.length}单)`);
-        dispatchBatch(hubName, orders);
+        dispatchingHubs.add(hubName);
+        try {
+            await dispatchBatch(hubName, orders);
+        } finally {
+            setTimeout(() => { dispatchingHubs.delete(hubName); }, 5000);
+        }
     }
 };
 
 const dispatchBatch = async (hubName: string, orders: ITrack[]) => {
-    const startCoords = orders[0].currentCoords as [number, number];
-    const destinations = orders.map(o => ({ id: o.id, coords: o.endCoords as [number, number] }));
+    const startCoords: [number, number] = [orders[0].currentCoords[0], orders[0].currentCoords[1]];
+    const destinations = orders.map(o => ({ id: o.id, coords: [o.endCoords[0], o.endCoords[1]] as [number, number] }));
+
     const sortedOrderIds = await solveTSP(startCoords, destinations);
+    console.log(`[TSP] 顺序: ${sortedOrderIds.join(' -> ')}`);
 
     let accumulatedSegment: number[][] = [];
     let prevCoords = startCoords;
 
+    const updatesToApply: Array<{ id: string, fullPath: number[][], log: any }> = [];
+
     for (const orderId of sortedOrderIds) {
-        const order = orders.find(o => o.id === orderId)!;
-        const trunkPath = order.path;
+        let currentOrderCoords: [number, number] | null = null;
 
-        // 🟢 关键：延时 800ms，确保 API 有足够时间响应
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            const order = orders.find(o => o.id === orderId)!;
+            const trunkPath = order.path;
+            const targetCoords: [number, number] = [order.endCoords[0], order.endCoords[1]];
+            currentOrderCoords = targetCoords;
 
-        const newSegment = await getDrivingRoute(prevCoords, order.endCoords as [number, number]);
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
-        // 🟢 关键：双重保底，如果 newSegment 依然为空，手动插入终点，防止路径不增长
-        if (!newSegment || newSegment.length === 0) {
-            accumulatedSegment.push(order.endCoords as [number, number]);
-        } else {
-            accumulatedSegment = [...accumulatedSegment, ...newSegment];
-        }
+            console.log(`[派送规划] ${orderId} : ${prevCoords} -> ${targetCoords}`);
 
-        const simpleSegment = accumulatedSegment.filter((_, i) => i % 2 === 0);
-        const fullPath = [...trunkPath, ...simpleSegment];
+            let newSegment = await getDrivingRoute(prevCoords, targetCoords);
 
-        const log = {
-            time: new Date(),
-            location: hubName,
-            description: `调度完成，快递员已从【${hubName}人民政府】出发，开始派送`,
-            status: 'delivering',
-            operator: '调度系统'
-        };
-
-        await TrackInfo.updateOne(
-            { id: order.id },
-            {
-                $set: { logisticsStatus: 'delivering', path: fullPath, currentCoords: startCoords },
-                $push: { tracks: log }
+            // 保底
+            if (!newSegment || newSegment.length < 2) {
+                newSegment = generateLine(prevCoords, targetCoords, 50);
             }
-        );
 
-        broadcast({ type: 'STATUS_UPDATE', id: order.id, status: 'delivering', newLog: log });
-        prevCoords = order.endCoords as [number, number];
+            // 🟢 [核心修改] 只对新增的一小段路抽稀，不要抽稀累积路径！
+            // 这样保证前面的路径细节不会丢失，长度也是严格递增的
+            const thinnedNewSegment = newSegment.filter((_, i) => i % 2 === 0);
+
+            // 累加
+            accumulatedSegment = [...accumulatedSegment, ...thinnedNewSegment];
+
+            // 拼接：干线 + 派送线
+            const fullPath = [...trunkPath, ...accumulatedSegment];
+
+            console.log(`[${orderId}] 路径总长: ${fullPath.length}`);
+
+            const log = {
+                time: new Date(),
+                location: hubName,
+                description: `调度完成，快递员已从【${hubName}人民政府】出发，开始派送`,
+                status: 'delivering',
+                operator: '调度系统'
+            };
+
+            updatesToApply.push({ id: orderId, fullPath, log });
+
+        } catch (err) {
+            console.error(`[派送错误] ${orderId}`, err);
+            // 容错：加直线
+            if (currentOrderCoords) accumulatedSegment.push(currentOrderCoords);
+        } finally {
+            if (currentOrderCoords) prevCoords = currentOrderCoords;
+        }
     }
 
+    // 批量更新数据库
+    console.log(`[派送] 批量更新 ${updatesToApply.length} 个订单`);
+    for (const update of updatesToApply) {
+        await TrackInfo.updateOne(
+            { id: update.id },
+            {
+                $set: {
+                    logisticsStatus: 'delivering',
+                    path: update.fullPath,
+                    currentCoords: startCoords
+                },
+                $push: { tracks: update.log }
+            }
+        );
+        broadcast({ type: 'STATUS_UPDATE', id: update.id, status: 'delivering', newLog: update.log });
+    }
+
+    // 批量重启仿真
     setTimeout(async () => {
-        for (const id of sortedOrderIds) {
-            const o = await TrackInfo.findOne({ id });
+        for (const update of updatesToApply) {
+            const o = await TrackInfo.findOne({ id: update.id });
             if (o) startSimulation(o);
         }
-    }, 1000);
+    }, 2000);
 };
 
 setInterval(async () => {

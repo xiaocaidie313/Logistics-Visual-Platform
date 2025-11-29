@@ -15,13 +15,14 @@ const HUBS: Record<string, [number, number]> = {
     '华中区域枢纽(长沙)': [112.93, 28.23],
     '华北区域枢纽(天津)': [117.20, 39.08],
     '华南区域枢纽(深圳)': [114.05, 22.54],
-    '安徽区域枢纽(合肥)': [117.22, 31.82]
+    '安徽区域枢纽(合肥)': [117.22, 31.82],
+    '山东区域枢纽(济南)': [117.02, 36.65]
 };
 
 const getDist = (p1: number[], p2: number[]) => Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
 
 // 强制生成直线 (保底方案)
-const generateLine = (start: number[], end: number[], steps: number = 20) => {
+export const generateLine = (start: number[], end: number[], steps: number = 20) => {
     // 如果起终点极近，直接返回终点
     if (getDist(start, end) < 0.0001) return [end];
 
