@@ -21,6 +21,8 @@ const ProductManagement: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterMerchant, setFilterMerchant] = useState('');
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -38,7 +40,7 @@ const ProductManagement: React.FC = () => {
   useEffect(() => {
     fetchProducts();
     fetchStatistics();
-  }, [pagination.page, filterCategory, filterStatus, filterMerchant]);
+  }, [pagination.page, filterCategory, filterStatus, filterMerchant, sortField, sortOrder]);
 
   const fetchMerchants = async () => {
     try {
@@ -63,7 +65,9 @@ const ProductManagement: React.FC = () => {
     try {
       const params: any = {
         page: pagination.page,
-        limit: pagination.limit
+        limit: pagination.limit,
+        sortBy: sortField,
+        sortOrder: sortOrder
       };
 
       if (filterCategory) params.category = filterCategory;
@@ -203,6 +207,20 @@ const ProductManagement: React.FC = () => {
     return colorMap[status] || '#999';
   };
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) return <span style={{ color: '#ccc', marginLeft: 4 }}>↕</span>;
+    return <span style={{ color: '#1976D2', marginLeft: 4 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>;
+  };
+
   return (
     <div className="product-management">
       <div className="page-header">
@@ -292,8 +310,18 @@ const ProductManagement: React.FC = () => {
                   <th>分类</th>
                   <th>SKU数量</th>
                   <th>状态</th>
-                  <th>销量</th>
-                  <th>创建时间</th>
+                  <th 
+                    onClick={() => handleSort('salesCount')} 
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    销量 {renderSortIcon('salesCount')}
+                  </th>
+                  <th 
+                    onClick={() => handleSort('createdAt')} 
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    创建时间 {renderSortIcon('createdAt')}
+                  </th>
                   <th>操作</th>
                 </tr>
               </thead>
