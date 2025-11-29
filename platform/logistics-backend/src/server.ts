@@ -112,7 +112,7 @@ const startSimulation = (track: ITrack) => {
                 const log = {
                     time: new Date(),
                     location: track.userAddress, // 🟢 确保这里取的是具体的收货地址
-                    description: `已在【${track.userAddress}】签收，感谢您的使用`,
+                    description: `已在【${track.userAddress}】签收，感谢您的使用，期待您的再次使用`,
                     status: 'delivered',
                     operator: '快递员'
                 };
