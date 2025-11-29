@@ -1,5 +1,7 @@
 import crypto from 'crypto';
-import type { Response } from 'express';
+import jwt from 'jsonwebtoken';
+import config from '../config.js';
+import type { Response, Request, NextFunction } from 'express';
 
 // 同一的响应格式
 export const sendResponse = (res: Response, code: number, message: string, data: unknown = {}) => {
@@ -13,9 +15,36 @@ export const hashPassword = (password: string, salt?: string): { hashedPassword:
     return { hashedPassword, salt: passwordSalt };
 };
 
+// 验证密码函数
+export const verifyPassword = (password: string, hashedPassword: string, salt: string): boolean => {
+    const { hashedPassword: hashToVerify } = hashPassword(password, salt);
+    return hashToVerify === hashedPassword;
+};
+
 
 // 移除敏感信息的辅助函数
 export const  removeSensitiveInfo = (userObj: any) => {
     const { password, salt, ...safeUser } = userObj;
     return safeUser;
 };
+
+//生成token函数
+export const Token = ({userId , role}:{userId:string, role:string}) =>{
+    return jwt.sign({userId, role}, config.JWT_SECRET, {expiresIn: '1h'});
+}
+
+//auth 验证token函数
+export const auth = (req:Request, res:Response, next:NextFunction) =>{
+    const token = req.headers.authorization?.split(' ')[1]
+    if(!token){
+        return sendResponse(res, 401, '缺少令牌', {});
+    }
+    try{
+        const decoded = jwt.verify(token, config.JWT_SECRET) as {userId:string, role:string}
+        (req as any).user = decoded; // 接受解码后的请求
+        next();
+    }catch(error){
+        const errorMessage = error instanceof Error ? error.message : '令牌无效';
+        return sendResponse(res, 401, errorMessage, {});
+    }
+}
