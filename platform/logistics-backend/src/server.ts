@@ -6,7 +6,7 @@ import TrackInfo, { ITrack } from './models/Track';
 import { planRoute, extractProvince } from './utils/geoService';
 
 const app = express();
-const PORT = 3002;
+const PORT = 3003;
 
 app.use(cors());
 app.use(express.json());
