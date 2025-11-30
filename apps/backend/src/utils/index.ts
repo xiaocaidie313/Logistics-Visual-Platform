@@ -1,5 +1,7 @@
 import crypto from 'crypto';
-import type { Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import config from '../config.js';
 
 // 同一的响应格式
 export const sendResponse = (res: Response, code: number, message: string, data: unknown = {}) => {
@@ -19,3 +21,24 @@ export const  removeSensitiveInfo = (userObj: any) => {
     const { password, salt, ...safeUser } = userObj;
     return safeUser;
 };
+
+//生成token函数
+export const Token = ({userId , role}:{userId:string, role:string}) =>{
+    return jwt.sign({userId, role}, config.JWT_SECRET, {expiresIn: '1h'});
+}
+
+//auth 验证token函数
+export const auth = (req:Request, res:Response, next:NextFunction) =>{
+    const token = (req as any).headers.authorization?.split(' ')[1]
+    if(!token){
+        return sendResponse(res, 401, '缺少令牌', {});
+    }
+    try{
+        const decoded = jwt.verify(token, config.JWT_SECRET) as {userId:string, role:string}
+        (req as any).user = decoded; // 接受解码后的请求
+        next();
+    }catch(error){
+        const errorMessage = error instanceof Error ? error.message : '令牌无效';
+        return sendResponse(res, 401, errorMessage, {});
+    }
+}

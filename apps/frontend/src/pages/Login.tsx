@@ -45,7 +45,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         // 保存用户信息到 localStorage
         localStorage.setItem("userInfo", JSON.stringify(result.data));
         localStorage.setItem("isLoggedIn", "true");
-
+        localStorage.setItem("token", result.data.token);
         if (onLoginSuccess) {
           onLoginSuccess(result.data);
         } else {
