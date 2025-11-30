@@ -8,16 +8,13 @@ axios.interceptors.request.use(config => {
   return config;
 },error => Promise.reject(error))
 
-<<<<<<< HEAD
 const API_BASE_URL = 'http://localhost:3002/api/admin';
-=======
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
->>>>>>> f71f7b13be64f02ab7a9b5fa62200cee44e9bd9c
 
 export interface ProductSKU {
   _id?: string;
   skuName: string;
   price: number;
+  
   stock: number;
   attributes?: {
     color?: string;
@@ -34,10 +31,7 @@ export interface Product {
   status: 'active' | 'inactive' | 'out_of_stock';
   salesCount?: number;
   merchantId?: string;
-<<<<<<< HEAD
   images?: string;
-=======
->>>>>>> f71f7b13be64f02ab7a9b5fa62200cee44e9bd9c
   createdAt?: string;
   updatedAt?: string;
 }
