@@ -15,6 +15,12 @@ export const hashPassword = (password: string, salt?: string): { hashedPassword:
     return { hashedPassword, salt: passwordSalt };
 };
 
+// 验证密码函数
+export const verifyPassword = (password: string, hashedPassword: string, salt: string): boolean => {
+    const { hashedPassword: hashToVerify } = hashPassword(password, salt);
+    return hashToVerify === hashedPassword;
+};
+
 
 // 移除敏感信息的辅助函数
 export const  removeSensitiveInfo = (userObj: any) => {
@@ -29,16 +35,24 @@ export const Token = ({userId , role}:{userId:string, role:string}) =>{
 
 //auth 验证token函数
 export const auth = (req:Request, res:Response, next:NextFunction) =>{
-    const token = (req as any).headers.authorization?.split(' ')[1]
+    // Express 会将 header 名称转换为小写
+    const authHeader = req.headers.authorization || (req.headers as any).Authorization;
+    const token = authHeader?.split(' ')[1];
+    
     if(!token){
+        console.log('Auth 中间件: 未找到 token');
+        console.log('请求头 authorization:', req.headers.authorization);
+        console.log('请求头 Authorization:', (req.headers as any).Authorization);
         return sendResponse(res, 401, '缺少令牌', {});
     }
+    
     try{
-        const decoded = jwt.verify(token, config.JWT_SECRET) as {userId:string, role:string}
+        const decoded = jwt.verify(token, config.JWT_SECRET) as {userId:string, role:string};
         (req as any).user = decoded; // 接受解码后的请求
         next();
     }catch(error){
         const errorMessage = error instanceof Error ? error.message : '令牌无效';
+        console.log('Auth 中间件: token 验证失败', errorMessage);
         return sendResponse(res, 401, errorMessage, {});
     }
 }
