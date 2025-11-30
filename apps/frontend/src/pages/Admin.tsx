@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Layout, Menu, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingOutlined, UserOutlined, AppstoreOutlined, LogoutOutlined } from '@ant-design/icons';
+import { ShoppingOutlined, UserOutlined, AppstoreOutlined, LogoutOutlined, ShopOutlined } from '@ant-design/icons';
 import OrderManagement from "./OrderManagement";
 import UserManagement from "./UserManagement";
 import ProductManagement from "./ProductManagement";
+import MerchantManagement from "./MerchantManagement";
 
 const { Header, Sider, Content } = Layout;
 
-type MenuKey = 'orders' | 'users' | 'products' | 'dashboard';
+type MenuKey = 'orders' | 'users' | 'products' | 'merchants' | 'dashboard';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -43,6 +44,11 @@ const AdminDashboard: React.FC = () => {
       label: '商品管理',
     },
     {
+      key: 'merchants',
+      icon: <ShopOutlined />,
+      label: '商家管理',
+    },
+    {
       key: 'orders',
       icon: <ShoppingOutlined />,
       label: '订单管理',
@@ -58,6 +64,8 @@ const AdminDashboard: React.FC = () => {
     switch (selectedMenu) {
       case 'products':
         return <ProductManagement />;
+      case 'merchants':
+        return <MerchantManagement />;
       case 'orders':
         return <OrderManagement />;
       case 'users':

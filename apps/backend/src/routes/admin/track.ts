@@ -1,13 +1,13 @@
 // 查询跟踪物流状态
 import express, {Request, Response } from 'express'
 import TrackInfo  from '../../models/track.js'
-import { sendResponse, auth } from '../../utils/index.js'
+import { sendResponse } from '../../utils/index.js'
 import { emitLogisticsUpdate, emitLogisticsStatusChange, emitLogisticsTrackAdded } from '../../services/websocket.js'
 
 const router  = express.Router();
 
 // 创建物流记录
-router.post('/track', auth, async (req: Request, res: Response) => {
+router.post('/track', async (req: Request, res: Response) => {
     try {
         const trackData = req.body;
         const newTrack = new TrackInfo(trackData);
@@ -24,7 +24,7 @@ router.post('/track', auth, async (req: Request, res: Response) => {
 });
 
 // 根据id查询
-router.get('/track/:id', auth, async (req: Request, res: Response) => {
+router.get('/track/:id', async (req: Request, res: Response) => {
     try {
         const track = await TrackInfo.findById(req.params.id);
         if (!track) {
@@ -38,7 +38,7 @@ router.get('/track/:id', auth, async (req: Request, res: Response) => {
 })
 
 // 根据订单id查询
-router.get('/track/order/:orderId', auth, async (req: Request, res: Response) => {
+router.get('/track/order/:orderId', async (req: Request, res: Response) => {
     try {
         const orderId = req.params.orderId;
         const tracks = await TrackInfo.find({ orderId });
@@ -53,7 +53,7 @@ router.get('/track/order/:orderId', auth, async (req: Request, res: Response) =>
 })
 
 // 根据物流单号查询
-router.get('/track/logistics/:logisticsNumber', auth, async (req: Request, res: Response) => {
+router.get('/track/logistics/:logisticsNumber', async (req: Request, res: Response) => {
     try {
         const logisticsNumber = req.params.logisticsNumber;
         const track = await TrackInfo.findOne({ logisticsNumber });
@@ -68,7 +68,7 @@ router.get('/track/logistics/:logisticsNumber', auth, async (req: Request, res: 
 })
 
 // 获取物流列表
-router.get('/track/list', auth, async (req: Request, res: Response) => {
+router.get('/track/list', async (req: Request, res: Response) => {
     try {
         const tracks = await TrackInfo.find();
         sendResponse(res, 200, 'Success', tracks);
@@ -79,7 +79,7 @@ router.get('/track/list', auth, async (req: Request, res: Response) => {
 })
 
 // 更新物流
-router.put('/track/update/:id', auth, async (req: Request, res: Response) => {
+router.put('/track/update/:id', async (req: Request, res: Response) => {
     try {
         const trackId = req.params.id;
         const updateData = req.body;
@@ -99,7 +99,7 @@ router.put('/track/update/:id', auth, async (req: Request, res: Response) => {
 })
 
 // 跟新状态
-router.put('/track/order/:orderId/status', auth, async (req: Request, res: Response) => {
+router.put('/track/order/:orderId/status', async (req: Request, res: Response) => {
     try {
         const orderId = req.params.orderId;
         const status = req.body.status;
@@ -123,7 +123,7 @@ router.put('/track/order/:orderId/status', auth, async (req: Request, res: Respo
 })
 
 // 添加物流轨迹节点
-router.post('/track/:id/track', auth, async (req: Request, res: Response) => {
+router.post('/track/:id/track', async (req: Request, res: Response) => {
     try {
         const trackId = req.params.id;
         const trackNode = req.body; // { time, location, description, status, operator }
@@ -155,7 +155,7 @@ router.post('/track/:id/track', auth, async (req: Request, res: Response) => {
 })
 
 // 删除物流记录
-router.delete('/track/delete/:id', auth, async (req: Request, res: Response) => {
+router.delete('/track/delete/:id', async (req: Request, res: Response) => {
     try {
         const trackId = req.params.id;
         const deletedTrack = await TrackInfo.findByIdAndDelete(trackId);

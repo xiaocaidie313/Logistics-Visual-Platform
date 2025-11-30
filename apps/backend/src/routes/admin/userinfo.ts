@@ -2,13 +2,13 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import UserInfo from '../../models/userinfo.js';
-import { sendResponse, auth } from '../../utils/index.js';
+import { sendResponse } from '../../utils/index.js';
 import { hashPassword, removeSensitiveInfo } from '../../utils/index.js';
 const router = express.Router();
 
 
 // 创建用户信息
-router.post('/userInfo', auth, async (req: Request, res: Response) => {
+router.post('/userInfo', async (req: Request, res: Response) => {
     try {
         const userData = req.body;
         
@@ -48,7 +48,7 @@ router.post('/userInfo', auth, async (req: Request, res: Response) => {
 });
 
 // 更新用户信息
-router.put('/userInfo/update/:id', auth, async (req: Request, res: Response) => {
+router.put('/userInfo/update/:id', async (req: Request, res: Response) => {
     try {
         const newUserData = req.body;
         
@@ -102,7 +102,7 @@ router.put('/userInfo/update/:id', auth, async (req: Request, res: Response) => 
 });
 
 // 删除用户信息
-router.delete('/userInfo/delete/:id', auth, async (req: Request, res: Response) => {
+router.delete('/userInfo/delete/:id', async (req: Request, res: Response) => {
     try {
         const userId = req.params.id;
         const deletedUser = await UserInfo.findByIdAndDelete(userId);
@@ -121,7 +121,7 @@ router.delete('/userInfo/delete/:id', auth, async (req: Request, res: Response) 
 });
 
 // 获取单个用户信息
-router.get('/userInfo/get/:id', auth, async (req: Request, res: Response) => {
+router.get('/userInfo/get/:id', async (req: Request, res: Response) => {
     try {
         const userId = req.params.id;
         const user = await UserInfo.findById(userId);
@@ -140,7 +140,7 @@ router.get('/userInfo/get/:id', auth, async (req: Request, res: Response) => {
 });
 
 // 根据用户名获取用户信息
-router.get('/userInfo/username/:username', auth, async (req: Request, res: Response) => {
+router.get('/userInfo/username/:username', async (req: Request, res: Response) => {
     try {
         const username = req.params.username;
         const user = await UserInfo.findOne({ username });
@@ -159,7 +159,7 @@ router.get('/userInfo/username/:username', auth, async (req: Request, res: Respo
 });
 
 // 获取用户信息列表
-router.get('/userInfo/list', auth, async (req: Request, res: Response) => {
+router.get('/userInfo/list', async (req: Request, res: Response) => {
     try {
         const users = await UserInfo.find();
         
@@ -174,7 +174,7 @@ router.get('/userInfo/list', auth, async (req: Request, res: Response) => {
 });
 
 // 添加/更新用户地址
-router.post('/userInfo/:id/address', auth, async (req: Request, res: Response) => {
+router.post('/userInfo/:id/address', async (req: Request, res: Response) => {
     try {
         const userId = req.params.id;
         const addressData = req.body;
@@ -213,7 +213,7 @@ router.post('/userInfo/:id/address', auth, async (req: Request, res: Response) =
 });
 
 // 删除用户地址
-router.delete('/userInfo/:id/address/:addressId', auth, async (req: Request, res: Response) => {
+router.delete('/userInfo/:id/address/:addressId', async (req: Request, res: Response) => {
     try {
         const { id: userId, addressId } = req.params;
         
@@ -236,7 +236,7 @@ router.delete('/userInfo/:id/address/:addressId', auth, async (req: Request, res
 });
 
 // 设置默认地址
-router.put('/userInfo/:id/address/:addressId/default', auth, async (req: Request, res: Response) => {
+router.put('/userInfo/:id/address/:addressId/default', async (req: Request, res: Response) => {
     try {
         const { id: userId, addressId } = req.params;
         

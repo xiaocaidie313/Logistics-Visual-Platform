@@ -17,7 +17,8 @@ import { WebSocketServer } from './services/websocket.js';
 const app = express();
 const PORT = 3002;  // 定义端口
 //const BACKEND_SERVER_URL = process.env.BACKEND_SERVER_URL;//
-const BACKEND_SERVER_URL = "http://47.109.143.184";//
+// const BACKEND_SERVER_URL = "http://47.109.143.184";
+const BACKEND_SERVER_URL = "http://localhost";
 
 if (!BACKEND_SERVER_URL) {
   throw new Error('BACKEND_SERVER_URL 环境变量未设置');

@@ -44,7 +44,6 @@ const productSchema = new mongoose.Schema(
       default: '',
     },
     // SKU 列表
-    // 商品详情种类
     skus: {
       type: [skuSchema],
       required: true,
@@ -72,7 +71,7 @@ const productSchema = new mongoose.Schema(
     },
     merchantId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'UserInfo', // 商户信息存储在 UserInfo 集合中，通过 role: 'merchant' 区分
+      ref: 'UserInfo',
       required: true,
       index: true,
     },
@@ -86,7 +85,5 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ category: 1, status: 1 });
 productSchema.index({ salesCount: -1 });
 
-// 导出productScheme
-export { productSchema };
 const Product = mongoose.model('Product', productSchema);
 export default Product;

@@ -8,7 +8,6 @@ const router = express.Router();
 // 挂载子路由
 router.use('/user', user);
 router.use('/admin', admin);
-router.use('/', login);
-
+router.use('/', login) 
 
 export default router;

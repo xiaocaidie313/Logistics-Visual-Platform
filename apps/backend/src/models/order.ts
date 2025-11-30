@@ -1,33 +1,5 @@
 import mongoose from 'mongoose';
 
-interface OrderItem {
-  productId: string;
-  skuid: string;
-  skuName: string;
-  price: number;
-  quantity: number;
-  totalPrice: number;
-  images: string[];
-}
-interface Order {
-  orderId: string;
-  userId: string;
-  shippingAddress: string;
-  senderAddress: string;
-  items: OrderItem[];
-  totalAmount: number;
-  status: string;
-  orderTime: Date;
-  paymentTime: Date;
-  shipmentTime: Date;
-  deliveryTime: Date;
-  remark: string;
-  cancelReason: string;
-  refundReason: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 // 订单项子文档
 const orderItemSchema = new mongoose.Schema({
   productId: {
@@ -68,22 +40,14 @@ const orderItemSchema = new mongoose.Schema({
 // 订单模型
 const orderSchema = new mongoose.Schema(
   {
-    // 识别订单
     orderId: {
       type: String,
       required: true,
       unique: true,
       index: true,
     },
-    // 用户信息  // 谁买的
+    // 用户信息
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'UserInfo',
-      required: true,
-      index: true,
-    },
-    // 商户信息  // 谁卖的
-    merchantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'UserInfo',
       required: true,
@@ -129,7 +93,7 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // 订单项 一个订单有多个商品
+    // 订单项（商品列表）
     items: {
       type: [orderItemSchema],
       required: true,
@@ -190,9 +154,6 @@ const orderSchema = new mongoose.Schema(
 // 索引优化
 orderSchema.index({ userId: 1, orderTime: -1 });
 orderSchema.index({ status: 1, orderTime: -1 });
-
-//到处ordershcema
-export { orderSchema };
 
 const Order = mongoose.model('Order', orderSchema);
 export default Order;

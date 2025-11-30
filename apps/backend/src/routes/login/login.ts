@@ -1,9 +1,14 @@
 import express, { Request, Response} from 'express'
 import UserInfo from '../../models/userinfo.js'
-import { hashPassword, removeSensitiveInfo, sendResponse, verifyPassword, Token , auth} from '../../utils/index.js'
+import { hashPassword, removeSensitiveInfo, sendResponse } from '../../utils/index.js'
 
 const router = express.Router()
 
+// 验证密码函数
+const verifyPassword = (password: string, hashedPassword: string, salt: string): boolean => {
+    const { hashedPassword: hashToVerify } = hashPassword(password, salt);
+    return hashToVerify === hashedPassword;
+};
 
 //登入
 router.post('/login', async (req: Request, res: Response) => {
@@ -25,7 +30,7 @@ router.post('/login', async (req: Request, res: Response) => {
         if(role && role !== user.role) {
             return sendResponse(res, 401, '用户角色错误', {});
         }
-        // 验证密码 使用用户存储的salt来验证
+        // 验证密码 使用用户存储的salt 来验证
         if (!user.salt || !user.password) {
             return sendResponse(res, 401, '用户数据异常，请联系管理员', {});
         }
@@ -33,10 +38,8 @@ router.post('/login', async (req: Request, res: Response) => {
         if (!isPasswordValid) {
             return sendResponse(res, 401, '用户名或密码错误', {});
         }
-        // 返回用户信息,去除敏感信息
+        // 返回用户信息（移除敏感信息）
         const userResponse = removeSensitiveInfo(user.toObject());
-        // 加入token 
-        userResponse.token = Token({userId: user._id.toString(), role: user.role}) as string | undefined ;
         return sendResponse(res, 200, '登入成功', userResponse);
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : '登录失败';
@@ -59,7 +62,7 @@ router.post('/register', async (req: Request, res: Response) => {
             return sendResponse(res, 400, '用户名已存在', {});
         }
         
-        // 检查手机号是否已存在
+        // 检查手机号是否已存在（使用 findOne 而不是 find）
         const existingPhone = await UserInfo.findOne({ phoneNumber });
         if (existingPhone) {
             return sendResponse(res, 400, '手机号已存在', {});
