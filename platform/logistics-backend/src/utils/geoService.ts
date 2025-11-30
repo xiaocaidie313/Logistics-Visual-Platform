@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-const AMAP_WEB_KEY = '2ac03f2b8d39805cd8a52c1cdd6162ae';
+const AMAP_WEB_KEY = '2ac03f2b8d39805cd8a52c1cdd6162ae'; // ⚠️ 替换你的 Key
 
-// 核心中转枢纽库
 const HUBS: Record<string, [number, number]> = {
     '华北转运中心(北京)': [116.45, 39.95],
     '华东转运中心(上海)': [121.40, 31.20],
@@ -15,15 +14,16 @@ const HUBS: Record<string, [number, number]> = {
     '华东区域枢纽(杭州)': [120.19, 30.26],
     '华中区域枢纽(长沙)': [112.93, 28.23],
     '华北区域枢纽(天津)': [117.20, 39.08],
-    '华南区域枢纽(深圳)': [114.05, 22.54]
+    '华南区域枢纽(深圳)': [114.05, 22.54],
+    '安徽区域枢纽(合肥)': [117.22, 31.82],
+    '山东区域枢纽(济南)': [117.02, 36.65]
 };
 
-const getDist = (p1: number[], p2: number[]) => {
-    return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
-};
+const getDist = (p1: number[], p2: number[]) => Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
 
-const generateLine = (start: number[], end: number[], steps: number) => {
-    const path = [];
+export const generateLine = (start: number[], end: number[], steps: number = 20) => {
+    if (getDist(start, end) < 0.0001) return [end];
+    const path: number[][] = [];
     for (let i = 0; i <= steps; i++) {
         const lng = start[0] + (end[0] - start[0]) * (i / steps);
         const lat = start[1] + (end[1] - start[1]) * (i / steps);
@@ -32,37 +32,54 @@ const generateLine = (start: number[], end: number[], steps: number) => {
     return path;
 };
 
-// 全局统一抽稀函数
 const downsamplePath = (path: number[][], targetCount: number) => {
-    const total = path.length;
-    if (total <= targetCount) return path;
-    const step = Math.ceil(total / targetCount);
-    return path.filter((_, index) => index === 0 || index === total - 1 || index % step === 0);
+    if (path.length <= targetCount) return path;
+    const step = Math.ceil(path.length / targetCount);
+    return path.filter((_, i) => i === 0 || i === path.length - 1 || i % step === 0);
 };
 
-const getDrivingRoute = async (start: number[], end: number[], strategy = 0): Promise<number[][]> => {
-    try {
-        const originStr = `${start[0].toFixed(6)},${start[1].toFixed(6)}`;
-        const destinationStr = `${end[0].toFixed(6)},${end[1].toFixed(6)}`;
-        const url = `https://restapi.amap.com/v3/direction/driving?key=${AMAP_WEB_KEY}&origin=${originStr}&destination=${destinationStr}&strategy=${strategy}`;
-        const res = await axios.get(url);
-
-        if (res.data.status === '1' && res.data.route && res.data.route.paths.length > 0) {
-            const routePath = res.data.route.paths[0];
-            const fullPath: number[][] = [];
-            for (const step of routePath.steps) {
-                const points = step.polyline.split(';').map((pair: string) => {
-                    const [lng, lat] = pair.split(',').map(Number);
-                    return [lng, lat];
-                });
-                fullPath.push(...points);
-            }
-            return fullPath; // 返回原始点，后续统一抽稀
+const appendPath = (target: number[][], segment: number[][]) => {
+    if (!segment || segment.length === 0) return;
+    if (target.length > 0) {
+        const last = target[target.length - 1];
+        const first = segment[0];
+        if (getDist(last, first) < 0.0001) {
+            target.push(...segment.slice(1));
+            return;
         }
-        return generateLine(start, end, 50);
-    } catch (error) {
-        return generateLine(start, end, 50);
     }
+    target.push(...segment);
+};
+
+// 🟢 [增强版] 提取城市名 (忽略省份前缀)
+export const extractCity = (address: string): string => {
+    if (!address) return "";
+    // 1. 去掉 "江苏省", "xx自治区" 等前缀，只取后面的部分
+    // 这里的正则意思是：找到最后一个'省'或'自治区'，取其后面的内容
+    let cleanAddr = address;
+    if (address.includes('省')) cleanAddr = address.split('省')[1];
+    else if (address.includes('自治区')) cleanAddr = address.split('自治区')[1];
+
+    // 2. 提取市名
+    const match = cleanAddr.match(/^.+?(市|自治州|地区|盟)/);
+    if (match) return match[0];
+
+    // 3. 如果没匹配到（可能是直辖市），尝试直接匹配
+    const directMatch = address.match(/^.+?(市)/);
+    return directMatch ? directMatch[0] : "";
+};
+
+export const extractDistrictHub = (address: string): string => {
+    const regex = /(.+?(省|自治区|直辖市))?(.+?(市|自治州|地区))?(.+?(区|县|市))/;
+    const match = address.match(regex);
+    if (match) return match[0];
+    return address.substring(0, 6);
+};
+
+export const extractProvince = (address: string): string => {
+    const provinces = ['北京市', '上海市', '广东省', '浙江省', '江苏省', '四川省', '湖北省', '山东省', '河南省', '河北省', '陕西省', '福建省', '湖南省', '安徽省', '辽宁省', '黑龙江省', '吉林省', '广西', '云南省', '贵州省', '山西省', '江西省', '天津市', '重庆市', '内蒙古', '新疆', '西藏', '宁夏', '海南'];
+    for (const p of provinces) { if (address.includes(p)) return p; }
+    return '其他';
 };
 
 export const getCoordsByAddress = async (address: string): Promise<[number, number]> => {
@@ -74,47 +91,90 @@ export const getCoordsByAddress = async (address: string): Promise<[number, numb
             const [lng, lat] = location.split(',').map(Number);
             return [lng, lat];
         }
-    } catch (error) { console.error(error); }
+    } catch (error) { console.error("Geocode Error", error); }
     return [116.40, 39.90];
 };
 
-export const extractProvince = (address: string): string => {
-    const provinces = ['北京市', '上海市', '广东省', '浙江省', '江苏省', '四川省', '湖北省', '山东省', '河南省', '河北省', '陕西省', '福建省', '湖南省', '安徽省', '辽宁省', '黑龙江省', '吉林省', '广西', '云南省', '贵州省', '山西省', '江西省', '天津市', '重庆市', '内蒙古', '新疆', '西藏', '宁夏', '海南'];
-    for (const p of provinces) { if (address.includes(p)) return p; }
-    return '其他';
+export const getDrivingRoute = async (start: number[], end: number[], strategy = 0): Promise<number[][]> => {
+    if (getDist(start, end) < 0.0001) return [start, end];
+
+    try {
+        const originStr = `${start[0].toFixed(6)},${start[1].toFixed(6)}`;
+        const destinationStr = `${end[0].toFixed(6)},${end[1].toFixed(6)}`;
+        const url = `https://restapi.amap.com/v3/direction/driving?key=${AMAP_WEB_KEY}&origin=${originStr}&destination=${destinationStr}&strategy=${strategy}`;
+        const res = await axios.get(url, { timeout: 3000 });
+
+        if (res.data.status === '1' && res.data.route && res.data.route.paths.length > 0) {
+            const points: number[][] = [];
+            res.data.route.paths[0].steps.forEach((step: any) => {
+                step.polyline.split(';').forEach((p: string) => {
+                    const [lng, lat] = p.split(',').map(Number);
+                    points.push([lng, lat]);
+                });
+            });
+            if (points.length > 0) return points;
+        }
+    } catch (e) { }
+    return generateLine(start, end, 50);
 };
 
-const scanPathForHubs = (path: number[][]) => {
-    const detectedStops: { stepIndex: number, hubName: string }[] = [];
-    const visitedHubs = new Set<string>();
-    path.forEach((point, index) => {
-        for (const [hubName, hubCoords] of Object.entries(HUBS)) {
-            if (visitedHubs.has(hubName)) continue;
-            const dist = getDist(point, hubCoords);
-            if (dist < 0.5) {
-                detectedStops.push({ stepIndex: index, hubName });
-                visitedHubs.add(hubName);
-            }
+const mapHubsToPath = (path: number[][], hubs: Array<{ name: string, coords: [number, number] }>) => {
+    const stops: { stepIndex: number, hubName: string }[] = [];
+    hubs.forEach(hub => {
+        let minD = Infinity;
+        let closestIndex = -1;
+        path.forEach((p, i) => {
+            const d = getDist(p, hub.coords);
+            if (d < minD) { minD = d; closestIndex = i; }
+        });
+        if (closestIndex !== -1 && minD < 2.0) {
+            stops.push({ stepIndex: closestIndex, hubName: hub.name });
         }
     });
-    return detectedStops;
+    return stops.sort((a, b) => a.stepIndex - b.stepIndex);
 };
 
-export const planRoute = async (startAddr: string, endAddr: string) => {
+// 🟢 [核心] 智能路由规划
+export const planRoute = async (startAddr: string, endAddr: string, isTrunkLine = false) => {
     const startCoords = await getCoordsByAddress(startAddr);
-    const endCoords = await getCoordsByAddress(endAddr);
-    const directDist = getDist(startCoords, endCoords);
+    const realEndCoords = await getCoordsByAddress(endAddr);
+    const districtHubName = extractDistrictHub(endAddr);
 
+    // 🟢 同城判断
+    const startCity = extractCity(startAddr);
+    const endCity = extractCity(endAddr);
+    // 增加容错：只要包含即可 (例如 "南京市" 和 "南京")
+    const isSameCity = startCity && endCity && (startCity.includes(endCity) || endCity.includes(startCity));
+
+    console.log(`[Geo] 城市比对: ${startCity} vs ${endCity} => 同城? ${isSameCity}`);
+
+    let targetCoords: [number, number];
     let rawFullPath: number[][] = [];
+    let transitStops: { stepIndex: number, hubName: string }[] = [];
 
-    // 1. 收集路径点
-    if (directDist < 2.0) {
-        // 短途：同城或周边城市
-        rawFullPath = await getDrivingRoute(startCoords, endCoords);
+    if (isSameCity) {
+        // 🟢 同城：直连，无中转
+        console.log(`[Geo] 同城模式 -> 直连收货地`);
+        targetCoords = realEndCoords;
+        rawFullPath = await getDrivingRoute(startCoords, targetCoords);
+        // transitStops 保持为空 []
     } else {
-        // 长途：跨区域中转
+        // 🟢 跨城
+        console.log(`[Geo] 跨城模式 -> 经过枢纽`);
+        if (isTrunkLine) {
+            const govAddress = districtHubName + "人民政府";
+            const govCoords = await getCoordsByAddress(govAddress);
+            if (govCoords[0] === 116.40 && govCoords[1] === 39.90 && !govAddress.includes('北京')) {
+                targetCoords = realEndCoords;
+            } else {
+                targetCoords = govCoords;
+            }
+        } else {
+            targetCoords = realEndCoords;
+        }
+
         let startHubName = '', endHubName = '';
-        let startHubCoords = startCoords, endHubCoords = endCoords;
+        let startHubCoords = startCoords, endHubCoords = targetCoords;
         let minS = Infinity, minE = Infinity;
 
         for (const [name, coords] of Object.entries(HUBS)) {
@@ -122,16 +182,8 @@ export const planRoute = async (startAddr: string, endAddr: string) => {
             if (d < minS) { minS = d; startHubCoords = coords; startHubName = name; }
         }
         for (const [name, coords] of Object.entries(HUBS)) {
-            const d = getDist(endCoords, coords);
+            const d = getDist(targetCoords, coords);
             if (d < minE) { minE = d; endHubCoords = coords; endHubName = name; }
-        }
-
-        // 防绕路
-        const distDirect = getDist(startHubCoords, endCoords);
-        const distViaHub = getDist(startHubCoords, endHubCoords) + getDist(endHubCoords, endCoords);
-        if (startHubName !== endHubName && (distViaHub > distDirect * 1.3 || getDist(endHubCoords, endCoords) > distDirect)) {
-            endHubName = startHubName;
-            endHubCoords = startHubCoords;
         }
 
         const segment1 = await getDrivingRoute(startCoords, startHubCoords);
@@ -139,23 +191,50 @@ export const planRoute = async (startAddr: string, endAddr: string) => {
 
         if (startHubName !== endHubName) {
             const segment2 = await getDrivingRoute(startHubCoords, endHubCoords, 2);
-            rawFullPath.push(...segment2);
+            appendPath(rawFullPath, segment2);
         }
 
-        const segment3 = await getDrivingRoute(endHubCoords, endCoords);
-        rawFullPath.push(...segment3);
+        const segment3 = await getDrivingRoute(endHubCoords, targetCoords);
+        appendPath(rawFullPath, segment3);
+
+        const hubsToMap = [
+            { name: startHubName, coords: startHubCoords },
+            { name: endHubName, coords: endHubCoords }
+        ];
+        const uniqueHubs = startHubName === endHubName ? [hubsToMap[0]] : hubsToMap;
+        const tempPath = downsamplePath(rawFullPath, 200);
+        transitStops = mapHubsToPath(tempPath, uniqueHubs);
     }
 
-    // 2. 全局抽稀
-    const finalPath = downsamplePath(rawFullPath, 150);
+    const finalPath = downsamplePath(rawFullPath, 200);
 
-    // 3.中转站扫描策略
-    // 只有当距离较远（> 2.0，约200公里）时，才扫描沿途的中转站
-    // 如果是同城短途（< 2.0），强制清空中转列表，不再触发“到达XX枢纽”的日志
-    let transitStops: { stepIndex: number, hubName: string }[] = [];
-    if (directDist >= 2.0) {
-        transitStops = scanPathForHubs(finalPath);
+    return {
+        startCoords,
+        endCoords: realEndCoords,
+        path: finalPath,
+        transitStops,
+        districtHub: districtHubName,
+        isSameCity
+    };
+};
+
+export const solveTSP = async (startHubCoords: [number, number], destinations: Array<{ id: string, coords: [number, number] }>) => {
+    const sortedOrderIds: string[] = [];
+    let currentPos = startHubCoords;
+    const remaining = [...destinations];
+
+    while (remaining.length > 0) {
+        let nearestIndex = -1;
+        let minDist = Infinity;
+        remaining.forEach((point, index) => {
+            const d = getDist(currentPos, point.coords);
+            if (d < minDist) { minDist = d; nearestIndex = index; }
+        });
+        if (nearestIndex !== -1) {
+            sortedOrderIds.push(remaining[nearestIndex].id);
+            currentPos = remaining[nearestIndex].coords;
+            remaining.splice(nearestIndex, 1);
+        } else { break; }
     }
-
-    return { startCoords, endCoords, path: finalPath, transitStops };
+    return sortedOrderIds;
 };
