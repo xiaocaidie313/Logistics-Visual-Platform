@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://47.109.143.184:3002/api/merchant';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface ProductSKU {
   _id?: string;
@@ -21,6 +21,7 @@ export interface Product {
   skus: ProductSKU[];
   status: 'active' | 'inactive' | 'out_of_stock';
   salesCount?: number;
+  merchantId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -65,6 +66,7 @@ export const getProductList = async (params?: {
   limit?: number;
   category?: string;
   status?: string;
+  merchantId?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }) => {
