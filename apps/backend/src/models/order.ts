@@ -154,6 +154,6 @@ const orderSchema = new mongoose.Schema(
 // 索引优化
 orderSchema.index({ userId: 1, orderTime: -1 });
 orderSchema.index({ status: 1, orderTime: -1 });
-
+export { orderSchema };
 const Order = mongoose.model('Order', orderSchema);
 export default Order;

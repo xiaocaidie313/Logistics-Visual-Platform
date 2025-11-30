@@ -84,6 +84,6 @@ const productSchema = new mongoose.Schema(
 // 索引优化
 productSchema.index({ category: 1, status: 1 });
 productSchema.index({ salesCount: -1 });
-
+export { productSchema };
 const Product = mongoose.model('Product', productSchema);
 export default Product;
