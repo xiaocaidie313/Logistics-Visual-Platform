@@ -1,6 +1,14 @@
 import axios from 'axios';
+// 配置axios拦截器 加入token
+axios.interceptors.request.use(config => {
+  const token = localStorage.getItem('token')
+  if(token){
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+},error => Promise.reject(error))
 
-const API_BASE_URL = 'http://47.109.143.184:3002/api/merchant';
+const API_BASE_URL = 'http://localhost:3002/api/admin';
 
 export interface ProductSKU {
   _id?: string;
@@ -21,6 +29,8 @@ export interface Product {
   skus: ProductSKU[];
   status: 'active' | 'inactive' | 'out_of_stock';
   salesCount?: number;
+  merchantId?: string;
+  images?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -69,7 +79,9 @@ export const getProductList = async (params?: {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }) => {
+  console.log('获取商品列表参数:', params);
   const response = await axios.get(`${API_BASE_URL}/product/list`, { params });
+  console.log('获取商品列表响应:', response.data);
   return response.data;
 };
 

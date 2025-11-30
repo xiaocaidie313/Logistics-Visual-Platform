@@ -72,6 +72,7 @@ const ProductManagement: React.FC = () => {
 
       const response = await getProductList(params);
       if (response.code === 200) {
+        console.log('获取商品列表成功:', response.data);
         setProducts(response.data.products);
         setPagination(response.data.pagination);
       }
@@ -86,8 +87,11 @@ const ProductManagement: React.FC = () => {
   const fetchStatistics = async () => {
     try {
       const response = await getProductStatistics();
-      if (response.code === 200) {
+      if (response.code === 200 && response.data) {
         setStatistics(response.data);
+      } else {
+        console.warn('获取统计数据失败，响应:', response);
+        setStatistics({ totalProducts: 0, activeProducts: 0, inactiveProducts: 0, outOfStockProducts: 0 });
       }
     } catch (error) {
       console.error('获取统计数据失败:', error);
@@ -241,7 +245,10 @@ const ProductManagement: React.FC = () => {
         <div className="filters">
           <select
             value={filterMerchant}
-            onChange={(e) => setFilterMerchant(e.target.value)}
+            onChange={(e) => {
+              console.log('商家选择改变:', e.target.value); // 调试：确认 onChange 被触发
+              setFilterMerchant(e.target.value);
+            }}
           >
             <option value="">所有商家</option>
             {merchants.map(merchant => (
