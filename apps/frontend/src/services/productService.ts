@@ -64,7 +64,6 @@ export const getProduct = async (id: string) => {
 export const getProductList = async (params?: {
   page?: number;
   limit?: number;
-  merchantId?: string;
   category?: string;
   status?: string;
   merchantId?: string;

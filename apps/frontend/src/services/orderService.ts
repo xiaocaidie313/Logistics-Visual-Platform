@@ -1,12 +1,4 @@
 import axios from 'axios';
-// 配置axios拦截器 加入token
-axios.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
-  if(token){
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-},error => Promise.reject(error))
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;// api/admin
 

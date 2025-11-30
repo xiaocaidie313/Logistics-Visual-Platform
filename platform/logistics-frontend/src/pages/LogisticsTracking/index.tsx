@@ -29,7 +29,7 @@ const LogisticsTracking: React.FC = () => {
 
     useEffect(() => {
         fetchStats();
-        const ws = new WebSocket('ws://localhost:3003');
+        const ws = new WebSocket('ws://localhost:3002');
         wsRef.current = ws;
 
         ws.onopen = () => {
@@ -79,7 +79,7 @@ const LogisticsTracking: React.FC = () => {
 
     const fetchStats = async () => {
         try {
-            const res = await fetch('http://localhost:3003/api/stats/density');
+            const res = await fetch('http://localhost:3002/api/stats/density');
             const data = await res.json();
             setChartData(data);
         } catch (e) {
@@ -102,7 +102,7 @@ const LogisticsTracking: React.FC = () => {
         }
 
         try {
-            const res = await fetch(`http://localhost:3003/api/tracks/${id}`);
+            const res = await fetch(`http://localhost:3002/api/tracks/${id}`);
             const result = await res.json();
 
             if (result.success && result.data) {
@@ -160,7 +160,7 @@ const LogisticsTracking: React.FC = () => {
         };
 
         try {
-            const res = await fetch('http://localhost:3003/api/tracks/create', {
+            const res = await fetch('http://localhost:3002/api/tracks/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(demoPayload)

@@ -1,7 +1,7 @@
 import express from "express";
 import type { Request, Response } from "express"; // 引入类型 避免报错
 import Orders from "../../models/order.js";
-import { sendResponse, auth } from "../../utils/index.js"; // 引入共用函数
+import { sendResponse } from "../../utils/index.js"; // 引入共用函数
 import {
   emitOrderCreated,
   emitOrderUpdate,
@@ -11,7 +11,7 @@ import {
 const router = express.Router();
 
 // 创建订单
-router.post("/order", auth, async (req: Request, res: Response) => {
+router.post("/order", async (req: Request, res: Response) => {
   try {
     const orderData = req.body; // 从请求体获取信息
     const newOrder = new Orders(orderData); //生成新订单
@@ -30,7 +30,7 @@ router.post("/order", auth, async (req: Request, res: Response) => {
 
 // 更改订单
 //  其实不只是id  还有orderID  考虑 skuname?
-router.put("/order/update/:id", auth, async (req: Request, res: Response) => {
+router.put("/order/update/:id", async (req: Request, res: Response) => {
   try {
     const newOrder = req.body;
     //  mongoose的 findByIdAndUpdate 方法
@@ -55,7 +55,7 @@ router.put("/order/update/:id", auth, async (req: Request, res: Response) => {
 // 删除订单
 //  其实不只是id  还有orderID  考虑 skuname?
 
-router.delete("/order/delete/:id", auth, async (req: Request, res: Response) => {
+router.delete("/order/delete/:id", async (req: Request, res: Response) => {
   try {
     const orderId = req.params.id;
     const deletedOrder = await Orders.findByIdAndDelete(orderId);
@@ -68,7 +68,7 @@ router.delete("/order/delete/:id", auth, async (req: Request, res: Response) => 
 });
 
 // 获取订单
-router.get("/order/get/:id", auth, async (req: Request, res: Response) => {
+router.get("/order/get/:id", async (req: Request, res: Response) => {
   try {
     const orderId = req.params.id;
     const order = await Orders.findById(orderId);
@@ -80,7 +80,7 @@ router.get("/order/get/:id", auth, async (req: Request, res: Response) => {
   }
 });
 // 获取订单列表
-router.get("/order/list", auth, async (req: Request, res: Response) => {
+router.get("/order/list", async (req: Request, res: Response) => {
   try {
     const orders = await Orders.find();
     sendResponse(res, 200, "Success", orders);
@@ -91,7 +91,7 @@ router.get("/order/list", auth, async (req: Request, res: Response) => {
   }
 });
 //切换状态
-router.put("/order/switch/status/:id", auth, async (req: Request, res: Response) => {
+router.put("/order/switch/status/:id", async (req: Request, res: Response) => {
   try {
     const orderId = req.params.id;
     const newStatus = req.body.status;
@@ -116,7 +116,7 @@ router.put("/order/switch/status/:id", auth, async (req: Request, res: Response)
 // 筛选订单
 /// 1 订单状态筛选
 /// 1.1 pending状态
-router.get("/order/filter/pending", auth, async (req: Request, res: Response) => {
+router.get("/order/filter/pending", async (req: Request, res: Response) => {
   try {
     const pendingOrders = await Orders.find({ status: "pending" });
     sendResponse(res, 200, "Success", pendingOrders);
@@ -127,7 +127,7 @@ router.get("/order/filter/pending", auth, async (req: Request, res: Response) =>
   }
 });
 /// 1.2 paid状态
-router.get("/order/filter/paid", auth, async (req: Request, res: Response) => {
+router.get("/order/filter/paid", async (req: Request, res: Response) => {
   try {
     const paidOrders = await Orders.find({ status: "paid" });
     sendResponse(res, 200, "Success", paidOrders);
@@ -138,7 +138,7 @@ router.get("/order/filter/paid", auth, async (req: Request, res: Response) => {
   }
 });
 /// 1.3 shipped状态
-router.get("/order/filter/shipped", auth, async (req: Request, res: Response) => {
+router.get("/order/filter/shipped", async (req: Request, res: Response) => {
   try {
     const shippedOrders = await Orders.find({ status: "shipped" });
     sendResponse(res, 200, "Success", shippedOrders);
@@ -149,7 +149,7 @@ router.get("/order/filter/shipped", auth, async (req: Request, res: Response) =>
   }
 });
 /// 1.4 confirmed状态
-router.get("/order/filter/confirmed", auth, async (req: Request, res: Response) => {
+router.get("/order/filter/confirmed", async (req: Request, res: Response) => {
   try {
     const confirmedOrders = await Orders.find({ status: "confirmed" });
     sendResponse(res, 200, "Success", confirmedOrders);
@@ -160,7 +160,7 @@ router.get("/order/filter/confirmed", auth, async (req: Request, res: Response) 
   }
 });
 /// 1.5 delivered状态
-router.get("/order/filter/delivered", auth, async (req: Request, res: Response) => {
+router.get("/order/filter/delivered", async (req: Request, res: Response) => {
   try {
     const deliveredOrders = await Orders.find({ status: "delivered" });
     sendResponse(res, 200, "Success", deliveredOrders);
@@ -171,7 +171,7 @@ router.get("/order/filter/delivered", auth, async (req: Request, res: Response) 
   }
 });
 /// 1.6 cancelled状态
-router.get("/order/filter/cancelled", auth, async (req: Request, res: Response) => {
+router.get("/order/filter/cancelled", async (req: Request, res: Response) => {
   try {
     const cancelledOrders = await Orders.find({ status: "cancelled" });
     sendResponse(res, 200, "Success", cancelledOrders);
@@ -183,7 +183,7 @@ router.get("/order/filter/cancelled", auth, async (req: Request, res: Response) 
 });
 
 /// 1.7 refunded状态
-router.get("/order/filter/refunded", auth, async (req: Request, res: Response) => {
+router.get("/order/filter/refunded", async (req: Request, res: Response) => {
   try {
     const refundedOrders = await Orders.find({ status: "refunded" });
     sendResponse(res, 200, "Success", refundedOrders);
@@ -195,7 +195,7 @@ router.get("/order/filter/refunded", auth, async (req: Request, res: Response) =
 });
 // 2 订单排序
 /// 2.1 按订单时间排序
-router.get("/order/sort/ordertime/asc", auth, async (req: Request, res: Response) => {
+router.get("/order/sort/ordertime/asc", async (req: Request, res: Response) => {
   //升序
   try {
     const sortedOrders = await Orders.find().sort({ ordertime: 1 });
@@ -206,7 +206,7 @@ router.get("/order/sort/ordertime/asc", auth, async (req: Request, res: Response
     sendResponse(res, 400, errorMessage, {});
   }
 });
-router.get("/order/sort/ordertime/des", auth, async (req: Request, res: Response) => {
+router.get("/order/sort/ordertime/des", async (req: Request, res: Response) => {
   //降序
   try {
     const sortedOrders = await Orders.find().sort({ ordertime: -1 });
@@ -218,7 +218,7 @@ router.get("/order/sort/ordertime/des", auth, async (req: Request, res: Response
   }
 });
 /// 2.2按照订单总的金额排序
-router.get("/order/sort/totprice/asc", auth, async (req: Request, res: Response) => {
+router.get("/order/sort/totprice/asc", async (req: Request, res: Response) => {
   //升序
   try {
     const sortedOrders = await Orders.find().sort({ totprice: 1 });
@@ -229,7 +229,7 @@ router.get("/order/sort/totprice/asc", auth, async (req: Request, res: Response)
     sendResponse(res, 400, "Error", errorMessage);
   }
 });
-router.get("/order/sort/totprice/des", auth, async (req: Request, res: Response) => {
+router.get("/order/sort/totprice/des", async (req: Request, res: Response) => {
   try {
     const sortedOrders = await Orders.find().sort({ totprice: -1 });
     sendResponse(res, 200, "Success", sortedOrders);
