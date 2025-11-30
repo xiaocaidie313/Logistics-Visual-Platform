@@ -6,6 +6,8 @@ import UserInfo from '../src/models/userinfo.js';
 // MongoDB 连接配置
 const MONGODB_URI = "mongodb://lms:123lms@47.109.143.184:27017/logistics";
 
+const Id = '692b16845c3f70d9071f33ed'
+
 const addMerchantProducts = async () => {
   try {
     // 连接数据库
@@ -30,10 +32,8 @@ const addMerchantProducts = async () => {
     }
 
     // 使用第一个商户ID 或者使用指定的ID
-    let merchantId = '6926d2154254b19e2f76f965';
-    if (merchants.length > 0 && merchants[0] && merchants[0]._id) {
-      merchantId = merchants[0]._id.toString();
-    }
+    let merchantId = Id;
+
     console.log(`\n=== 使用商户ID: ${merchantId} ===`);
     
     // 1. 查找该商户的所有商品（尝试两种方式）

@@ -5,9 +5,9 @@ import UserInfo from '../src/models/userinfo.js';
 import Product from '../src/models/product.js';
 
 const MONGODB_URI = "mongodb://lms:123lms@47.109.143.184:27017/logistics";
-const merchantId = '6926d2154254b19e2f76f965';
+const merchantId = '692b16f39c40f2f39f6f629f';
 const customerId = '692b188eee40540c8a6d6d54';
-// 生成订单ID（确保唯一性）
+// 生成订单Id
 const generateOrderId = () => {
   // 使用时间戳 + 随机数确保唯一性
   const timestamp = Date.now();

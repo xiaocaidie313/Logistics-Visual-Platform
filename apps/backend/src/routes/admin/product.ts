@@ -2,7 +2,8 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import Product from '../../models/product.js';
 import { sendResponse, auth } from '../../utils/index.js';
-import ownMerchantOrder from '../../models/ownmerchantorder.js';
+import ownMerchantProduct from '../../models/ownmerchantproduct.js';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -105,37 +106,75 @@ router.get('/product/list', auth, async (req: Request, res: Response) => {
       merchantId
     } = req.query;
     
-    // 构建查询条件
-    const query: any = {};
-    if (category) query.category = category;
-    if (status) query.status = status;
-    if (merchantId) query.merchantId = merchantId;
-    
-    // 排序
-    const sort: any = {};
-    sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
-    
     // 分页
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
     
-    const products = await Product.find({merchantId: merchantId})
-      .sort(sort)
-      .skip(skip)
-      .limit(limitNum);
+    // 构建查询条件（用于查询 ownMerchantProduct）
+    const merchantQuery: any = {};
+    if (merchantId) {
+      merchantQuery.merchantId = new mongoose.Types.ObjectId(merchantId as string);
+    }
     
-    const total = await Product.countDocuments({merchantId: merchantId});
+    // 查询 ownMerchantProduct 文档
+    const merchantProducts = await ownMerchantProduct.find(merchantQuery);
     
+    // 从所有商家的 products 数组中提取商品
+    let allProducts: any[] = [];
+    merchantProducts.forEach(merchantDoc => {
+      if (merchantDoc.products && Array.isArray(merchantDoc.products)) {
+        // 为每个商品添加 merchantId（如果需要）
+        const productsWithMerchant = merchantDoc.products.map((product: any) => {
+          const productObj = product.toObject ? product.toObject() : product;
+          return {
+            ...productObj,
+            merchantId: merchantDoc.merchantId.toString()
+          };
+        });
+        allProducts = allProducts.concat(productsWithMerchant);
+      }
+    });
+    
+    // 应用筛选条件（category, status）
+    let filteredProducts = allProducts;
+    if (category) {
+      filteredProducts = filteredProducts.filter((p: any) => p.category === category);
+    }
+    if (status) {
+      filteredProducts = filteredProducts.filter((p: any) => p.status === status);
+    }
+    
+    // 排序
+    filteredProducts.sort((a: any, b: any) => {
+      const aValue = a[sortBy as string];
+      const bValue = b[sortBy as string];
+      
+      if (aValue === undefined || aValue === null) return 1;
+      if (bValue === undefined || bValue === null) return -1;
+      
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    // 计算总数
+    const total = filteredProducts.length;
+    const totalPages = Math.ceil(total / limitNum);
+    
+    // 分页
+    const paginatedProducts = filteredProducts.slice(skip, skip + limitNum);
+    
+    // 返回符合前端期望的格式
     sendResponse(res, 200, 'Success', {
-      products,
+      products: paginatedProducts,
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total,
-        totalPages: Math.ceil(total / limitNum)
+        total: total,
+        totalPages: totalPages
       }
-    });
+    });  
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : '获取商品列表失败';
     sendResponse(res, 400, errorMessage, {});

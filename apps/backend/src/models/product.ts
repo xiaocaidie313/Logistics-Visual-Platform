@@ -65,6 +65,11 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    images:{
+      type: String,
+      required: false,
+      default: '',
+    },
     merchantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'UserInfo', // 商户信息存储在 UserInfo 集合中，通过 role: 'merchant' 区分
