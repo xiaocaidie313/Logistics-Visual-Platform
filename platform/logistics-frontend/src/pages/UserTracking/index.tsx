@@ -40,7 +40,7 @@ const UserTracking: React.FC = () => {
 
     const fetchOrder = async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:3002/api/tracks/${id}`);
+            const res = await fetch(`http://localhost:3003/api/tracks/${id}`);
             const result = await res.json();
 
             if (result.success && result.data) {
@@ -68,7 +68,7 @@ const UserTracking: React.FC = () => {
     };
 
     const connectWebSocket = (targetId: string) => {
-        const ws = new WebSocket('ws://localhost:3002');
+        const ws = new WebSocket('ws://localhost:3003');
         wsRef.current = ws;
 
         ws.onmessage = (event) => {

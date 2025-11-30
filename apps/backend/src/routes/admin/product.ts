@@ -1,12 +1,13 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import Product from '../../models/product.js';
-import { sendResponse } from '../../utils/index.js';
+import { sendResponse, auth } from '../../utils/index.js';
+import ownMerchantOrder from '../../models/ownmerchantorder.js';
 
 const router = express.Router();
 
 // 创建商品
-router.post('/product', async (req: Request, res: Response) => {
+router.post('/product', auth, async (req: Request, res: Response) => {
   try {
     const productData = req.body;
     
@@ -26,7 +27,7 @@ router.post('/product', async (req: Request, res: Response) => {
 });
 
 // 更新商品
-router.put('/product/update/:id', async (req: Request, res: Response) => {
+router.put('/product/update/:id', auth, async (req: Request, res: Response) => {
   try {
     const productData = req.body;
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -48,7 +49,7 @@ router.put('/product/update/:id', async (req: Request, res: Response) => {
 });
 
 // 删除商品
-router.delete('/product/delete/:id', async (req: Request, res: Response) => {
+router.delete('/product/delete/:id', auth, async (req: Request, res: Response) => {
   try {
     const productId = req.params.id;
     const deletedProduct = await Product.findByIdAndDelete(productId);
@@ -66,7 +67,7 @@ router.delete('/product/delete/:id', async (req: Request, res: Response) => {
 });
 
 // 获取单个商品
-router.get('/product/get/:id', async (req: Request, res: Response) => {
+router.get('/product/get/:id', auth, async (req: Request, res: Response) => {
   try {
     const productId = req.params.id;
     const product = await Product.findById(productId);
@@ -82,9 +83,17 @@ router.get('/product/get/:id', async (req: Request, res: Response) => {
     sendResponse(res, 400, errorMessage, {});
   }
 });
+// 增加商家的订单
+// router.post('/product/add/merchant/:merchantId', auth, async (req, res) =>{
+//   try{
 
-// 获取商品列表（支持分页、筛选、排序）
-router.get('/product/list', async (req: Request, res: Response) => {
+//   }catch(error: unknown){
+//     const errorMessage = error instanceof Error ? error.message : '增加商品失败';
+//     sendResponse(res, 400, errorMessage, {});
+//   }
+// })
+// 获取商品列表  根据不同的merchantId
+router.get('/product/list', auth, async (req: Request, res: Response) => {
   try {
     const { 
       page = 1, 
@@ -111,12 +120,12 @@ router.get('/product/list', async (req: Request, res: Response) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
     
-    const products = await Product.find(query)
+    const products = await Product.find({merchantId: merchantId})
       .sort(sort)
       .skip(skip)
       .limit(limitNum);
     
-    const total = await Product.countDocuments(query);
+    const total = await Product.countDocuments({merchantId: merchantId});
     
     sendResponse(res, 200, 'Success', {
       products,
@@ -134,7 +143,7 @@ router.get('/product/list', async (req: Request, res: Response) => {
 });
 
 // 按分类筛选商品
-router.get('/product/filter/category/:category', async (req: Request, res: Response) => {
+router.get('/product/filter/category/:category', auth, async (req: Request, res: Response) => {
   try {
     const category = req.params.category;
     const products = await Product.find({ category }).sort({ createdAt: -1 });
@@ -146,7 +155,7 @@ router.get('/product/filter/category/:category', async (req: Request, res: Respo
 });
 
 // 按状态筛选商品
-router.get('/product/filter/status/:status', async (req: Request, res: Response) => {
+router.get('/product/filter/status/:status', auth, async (req: Request, res: Response) => {
   try {
     const status = req.params.status;
     if (!status) {
@@ -169,7 +178,7 @@ router.get('/product/filter/status/:status', async (req: Request, res: Response)
 });
 
 // 更新商品状态
-router.put('/product/status/:id', async (req: Request, res: Response) => {
+router.put('/product/status/:id', auth, async (req: Request, res: Response) => {
   try {
     const productId = req.params.id;
     const { status } = req.body;
@@ -199,7 +208,7 @@ router.put('/product/status/:id', async (req: Request, res: Response) => {
 });
 
 // 更新 SKU 库存
-router.put('/product/sku/stock/:id/:skuId', async (req: Request, res: Response) => {
+router.put('/product/sku/stock/:id/:skuId', auth, async (req: Request, res: Response) => {
   try {
     const { id, skuId } = req.params;
     const { stock } = req.body;
@@ -233,7 +242,7 @@ router.put('/product/sku/stock/:id/:skuId', async (req: Request, res: Response) 
 });
 
 // 商品搜索
-router.get('/product/search', async (req: Request, res: Response) => {
+router.get('/product/search', auth, async (req: Request, res: Response) => {
   try {
     const { keyword } = req.query;
     
@@ -257,7 +266,7 @@ router.get('/product/search', async (req: Request, res: Response) => {
 });
 
 // 商品统计
-router.get('/product/statistics', async (req: Request, res: Response) => {
+router.get('/product/statistics', auth, async (req: Request, res: Response) => {
   try {
     const statistics = await Product.aggregate([
       {

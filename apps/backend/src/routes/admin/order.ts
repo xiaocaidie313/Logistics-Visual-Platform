@@ -1,13 +1,13 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import Order from '../../models/order.js';
-import { sendResponse } from '../../utils/index.js';
+import { sendResponse, auth } from '../../utils/index.js';
 import { emitOrderCreated, emitOrderUpdate, emitOrderStatusChange } from '../../services/websocket.js';
 
 const router = express.Router();
 
 // 创建订单
-router.post('/order', async (req: Request, res: Response) => {
+router.post('/order', auth, async (req: Request, res: Response) => {
   try {
     const orderData = req.body;
     const newOrder = new Order(orderData);
@@ -24,7 +24,7 @@ router.post('/order', async (req: Request, res: Response) => {
 });
 
 // 更新订单
-router.put('/order/update/:id', async (req: Request, res: Response) => {
+router.put('/order/update/:id', auth, async (req: Request, res: Response) => {
   try {
     const newOrder = req.body;
     const updatedOrder = await Order.findByIdAndUpdate(req.params.id, newOrder, { new: true });
@@ -42,7 +42,7 @@ router.put('/order/update/:id', async (req: Request, res: Response) => {
 });
 
 // 删除订单
-router.delete('/order/delete/:id', async (req: Request, res: Response) => {
+router.delete('/order/delete/:id', auth, async (req: Request, res: Response) => {
   try {
     const orderId = req.params.id;
     const deletedOrder = await Order.findByIdAndDelete(orderId);
@@ -54,7 +54,7 @@ router.delete('/order/delete/:id', async (req: Request, res: Response) => {
 });
 
 // 获取单个订单
-router.get('/order/get/:id', async (req: Request, res: Response) => {
+router.get('/order/get/:id', auth, async (req: Request, res: Response) => {
   try {
     const orderId = req.params.id;
     const order = await Order.findById(orderId).populate('userId', 'username phoneNumber');
@@ -66,7 +66,7 @@ router.get('/order/get/:id', async (req: Request, res: Response) => {
 });
 
 // 获取订单列表
-router.get('/order/list', async (req: Request, res: Response) => {
+router.get('/order/list', auth, async (req: Request, res: Response) => {
   try {
     const orders = await Order.find().populate('userId', 'username phoneNumber').sort({ orderTime: -1 });
     sendResponse(res, 200, 'Success', orders);
@@ -77,7 +77,7 @@ router.get('/order/list', async (req: Request, res: Response) => {
 });
 
 // 切换订单状态
-router.put('/order/switch/status/:id', async (req: Request, res: Response) => {
+router.put('/order/switch/status/:id', auth, async (req: Request, res: Response) => {
   try {
     const orderId = req.params.id;
     const newStatus = req.body.status;
@@ -118,7 +118,7 @@ router.put('/order/switch/status/:id', async (req: Request, res: Response) => {
 });
 
 // 按状态筛选订单（通用接口）
-router.get('/order/filter/:status', async (req: Request, res: Response) => {
+router.get('/order/filter/:status', auth, async (req: Request, res: Response) => {
   try {
     const status = req.params.status;
     if (!status) {
@@ -143,7 +143,7 @@ router.get('/order/filter/:status', async (req: Request, res: Response) => {
 });
 
 // 按订单时间排序
-router.get('/order/sort/ordertime/:order', async (req: Request, res: Response) => {
+router.get('/order/sort/ordertime/:order', auth, async (req: Request, res: Response) => {
   try {
     const sortOrder = req.params.order === 'asc' ? 1 : -1;
     const sortedOrders = await Order.find()
@@ -157,7 +157,7 @@ router.get('/order/sort/ordertime/:order', async (req: Request, res: Response) =
 });
 
 // 按订单总金额排序
-router.get('/order/sort/totalprice/:order', async (req: Request, res: Response) => {
+router.get('/order/sort/totalprice/:order', auth, async (req: Request, res: Response) => {
   try {
     const sortOrder = req.params.order === 'asc' ? 1 : -1;
     const sortedOrders = await Order.find()
@@ -171,7 +171,7 @@ router.get('/order/sort/totalprice/:order', async (req: Request, res: Response) 
 });
 
 // 根据用户ID获取订单
-router.get('/order/user/:userId', async (req: Request, res: Response) => {
+router.get('/order/user/:userId', auth, async (req: Request, res: Response) => {
   try {
     const userId = req.params.userId;
     const orders = await Order.find({ userId })
@@ -185,7 +185,7 @@ router.get('/order/user/:userId', async (req: Request, res: Response) => {
 });
 
 // 订单统计
-router.get('/order/statistics', async (req: Request, res: Response) => {
+router.get('/order/statistics', auth, async (req: Request, res: Response) => {
   try {
     const statistics = await Order.aggregate([
       {

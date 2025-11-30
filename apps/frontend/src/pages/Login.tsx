@@ -14,7 +14,7 @@ interface LoginFormValues {
   role?: string;
 }
 
-interface LoginProps {
+interface LoginProps {  
   onLoginSuccess?: (userInfo: any) => void;
 }
 
@@ -22,7 +22,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const onFinish: FormProps<LoginFormValues>["onFinish"] = async (values) => {
+  const onFinish: FormProps<LoginFormValues>["onFinish"] = async (val) => {
     setLoading(true);
     try {
       const response = await fetch("http://localhost:3002/api/login", {
@@ -31,9 +31,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: values.username,
-          password: values.password,
-          role:values.role
+          username: val.username,
+          password: val.password,
+          role:val.role
         }),
       });
 
@@ -45,11 +45,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         // 保存用户信息到 localStorage
         localStorage.setItem("userInfo", JSON.stringify(result.data));
         localStorage.setItem("isLoggedIn", "true");
-
+        localStorage.setItem("token", result.data.token as string || '' ); // 本地保存token
         if (onLoginSuccess) {
           onLoginSuccess(result.data);
         } else {
-          const role = result.data.role || values.role || "customer";
+          const role = result.data.role || val.role || "customer";
           if (role === "merchant") {
             navigate("/merchant");
           } else if (role === "admin") {
