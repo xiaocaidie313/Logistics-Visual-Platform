@@ -181,7 +181,7 @@ const checkAndDispatch = async (hubName: string) => {
     if (orders.length === 0) return;
 
     const now = Date.now();
-    const TIMEOUT_THRESHOLD = 60 * 1000;
+    const TIMEOUT_THRESHOLD = 10 * 60 * 1000;
     const isFull = orders.length >= 5;
     const isTimeout = orders.some(o => o.hubArrivalTime && (now - new Date(o.hubArrivalTime).getTime() > TIMEOUT_THRESHOLD));
 
