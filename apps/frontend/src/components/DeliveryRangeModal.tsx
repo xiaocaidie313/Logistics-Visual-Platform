@@ -1,5 +1,5 @@
-import { Modal, Form, Switch, Button, Cascader, Space, Card, message, InputNumber } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Modal, Form, Switch, Button, Cascader, Space, Card, message, InputNumber, Radio } from 'antd';
+import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { useEffect, useState, useRef } from 'react';
 import { DeliveryMethods } from '../services/merchantService';
 import { areaData } from '../utils/areaData';
@@ -33,13 +33,24 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
     const [currentInstantArea, setCurrentInstantArea] = useState<any>(null);
     const [showMapModal, setShowMapModal] = useState(false);
     
+    // 地图相关状态
     const mapRef = useRef<any>(null);
     const mapInstanceRef = useRef<any>(null);
     const circleRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
     const markerIconRef = useRef<any>(null);
-    const currentRadiusRef = useRef(5000); // 使用 ref 存储最新的半径值
-    const [currentRadius, setCurrentRadius] = useState(5000); // 当前配送半径（用于显示）
+    
+    // 多边形相关引用
+    const polygonRef = useRef<any>(null);
+    const mouseToolRef = useRef<any>(null);
+    const polygonEditorRef = useRef<any>(null);
+
+    // 状态
+    const [drawType, setDrawType] = useState<'circle' | 'polygon'>('circle');
+    const drawTypeRef = useRef<'circle' | 'polygon'>('circle'); // 增加 ref 追踪 drawType
+    const currentRadiusRef = useRef(5000);  
+    const [currentRadius, setCurrentRadius] = useState(5000); 
+    const [isDrawing, setIsDrawing] = useState(false);
 
     useEffect(() => {
         if (visible && initialValues) {
@@ -71,31 +82,43 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
     // 监听地图弹窗打开，初始化地图
     useEffect(() => {
         if (showMapModal && mapRef.current) {
-            // 延迟初始化，确保 DOM 完全渲染
             const timer = setTimeout(() => {
                 const instantAreas = form.getFieldValue('instantCoverageAreas') || [];
                 const existingArea = currentInstantArea?.index !== undefined && instantAreas[currentInstantArea.index]
                     ? instantAreas[currentInstantArea.index]
                     : null;
                 
-                console.log('准备初始化地图，已有区域:', existingArea);
                 initMap(existingArea);
-            }, 300); // 增加延迟确保DOM完全渲染
+            }, 300); 
             return () => clearTimeout(timer);
         } else if (!showMapModal) {
-            // 关闭弹窗时清理地图资源
-            if (mapInstanceRef.current) {
-                try {
-                    mapInstanceRef.current.destroy();
-                    mapInstanceRef.current = null;
-                    markerRef.current = null;
-                    circleRef.current = null;
-                } catch (error) {
-                    console.error('清理地图资源失败:', error);
-                }
-            }
+            clearMapResources();
         }
     }, [showMapModal]);
+
+    // 清理地图资源
+    const clearMapResources = () => {
+        if (mouseToolRef.current) {
+            mouseToolRef.current.close(true);
+            mouseToolRef.current = null;
+        }
+        if (polygonEditorRef.current) {
+            polygonEditorRef.current.close();
+            polygonEditorRef.current = null;
+        }
+        if (mapInstanceRef.current) {
+            try {
+                mapInstanceRef.current.destroy();
+                mapInstanceRef.current = null;
+                markerRef.current = null;
+                circleRef.current = null;
+                polygonRef.current = null;
+            } catch (error) {
+                console.error('清理地图资源失败:', error);
+            }
+        }
+        setIsDrawing(false);
+    };
 
     const handleSubmit = async () => {
         try {
@@ -133,12 +156,11 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
             return;
         }
 
-        // 从环境变量获取高德地图 API Key
         const amapKey = import.meta.env.VITE_AMAP_KEY || 'YOUR_AMAP_KEY_HERE';
         
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = `https://webapi.amap.com/maps?v=2.0&key=${amapKey}&plugin=AMap.DistrictSearch,AMap.Circle,AMap.Geocoder`;
+            script.src = `https://webapi.amap.com/maps?v=2.0&key=${amapKey}&plugin=AMap.DistrictSearch,AMap.Circle,AMap.Geocoder,AMap.MouseTool,AMap.PolygonEditor`;
             script.async = true;
             script.onload = resolve;
             script.onerror = reject;
@@ -154,13 +176,25 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
             const instantAreas = form.getFieldValue('instantCoverageAreas') || [];
             if (index !== undefined && instantAreas[index]) {
                 setCurrentInstantArea({ ...instantAreas[index], index });
-                const radius = instantAreas[index].radius || 5000;
-                setCurrentRadius(radius);
-                currentRadiusRef.current = radius; // 同步更新 ref
+                const area = instantAreas[index];
+                
+                // 判断是圆形还是多边形
+                if (area.polygon && area.polygon.length > 0) {
+                    setDrawType('polygon');
+                    drawTypeRef.current = 'polygon'; // 同步 ref
+                } else {
+                    setDrawType('circle');
+                    drawTypeRef.current = 'circle'; // 同步 ref
+                    const radius = area.radius || 5000;
+                    setCurrentRadius(radius);
+                    currentRadiusRef.current = radius;
+                }
             } else {
                 setCurrentInstantArea({ index: instantAreas.length });
+                setDrawType('circle'); 
+                drawTypeRef.current = 'circle'; // 同步 ref
                 setCurrentRadius(5000);
-                currentRadiusRef.current = 5000; // 同步更新 ref
+                currentRadiusRef.current = 5000;
             }
             
             setShowMapModal(true);
@@ -170,11 +204,9 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
         }
     };
 
-    // 统一创建配送中心标记，确保图标一致
+    // 统一创建配送中心标记
     const addCenterMarker = (map: any, lng: number, lat: number) => {
-        if (!window.AMap) {
-            return null;
-        }
+        if (!window.AMap) return null;
         
         if (!markerIconRef.current) {
             markerIconRef.current = new window.AMap.Icon({
@@ -184,6 +216,11 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
             });
         }
         
+        // 清除旧标记
+        if (markerRef.current) {
+            map.remove(markerRef.current);
+        }
+
         const marker = new window.AMap.Marker({
             position: [lng, lat],
             title: '配送中心',
@@ -197,9 +234,7 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
     };
 
     const extractLngLat = (position: any) => {
-        if (!position) {
-            return { lng: 0, lat: 0 };
-        }
+        if (!position) return { lng: 0, lat: 0 };
         if (typeof position.getLng === 'function' && typeof position.getLat === 'function') {
             return { lng: position.getLng(), lat: position.getLat() };
         }
@@ -215,9 +250,7 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
                 const found = value.find((item) => item && item.toString().trim());
                 return found ? found.toString().trim() : '';
             }
-            if (typeof value === 'number') {
-                return value.toString().trim();
-            }
+            if (typeof value === 'number') return value.toString().trim();
             return value ? value.trim() : '';
         };
 
@@ -230,31 +263,17 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
 
         const cityCode = normalize(addressComponent?.adcode) || normalize(addressComponent?.citycode);
 
-        return {
-            cityName,
-            cityCode,
-        };
+        return { cityName, cityCode };
     };
 
     // 初始化地图
     const initMap = (existingArea?: any) => {
-        if (!window.AMap || !mapRef.current) {
-            console.error('地图初始化失败：AMap 或 mapRef 不可用');
-            return;
-        }
+        if (!window.AMap || !mapRef.current) return;
 
         try {
-            // 清理现有地图
-            if (mapInstanceRef.current) {
-                mapInstanceRef.current.destroy();
-                mapInstanceRef.current = null;
-            }
-
             const center = existingArea?.center
                 ? [existingArea.center.lng, existingArea.center.lat]
-                : [116.397428, 39.90923]; // 默认北京
-
-            console.log('初始化地图，中心点:', center, '已有区域:', existingArea);
+                : [116.397428, 39.90923]; 
 
             const map = new window.AMap.Map(mapRef.current, {
                 zoom: existingArea ? 13 : 12,
@@ -265,144 +284,267 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
 
             mapInstanceRef.current = map;
 
-            // 等待地图完全加载
             map.on('complete', () => {
-                console.log('地图加载完成');
-                
-                // 如果有现有区域，绘制圆形和标记
-                if (existingArea && existingArea.center && existingArea.radius) {
-                    console.log('绘制已有配送区域 - 中心:', existingArea.center, '半径:', existingArea.radius);
+                if (existingArea) {
+                    addCenterMarker(map, existingArea.center.lng, existingArea.center.lat);
                     
-                    // 先延迟一下，确保地图完全渲染
-                    setTimeout(() => {
-                        // 添加中心点标记
-                        addCenterMarker(map, existingArea.center.lng, existingArea.center.lat);
-                        
-                        // 再延迟绘制圆形
-                        setTimeout(() => {
-                            drawCircle(map, existingArea.center, existingArea.radius);
-                            console.log('已有配送区域绘制完成');
-                        }, 100);
-                    }, 100);
+                    if (existingArea.polygon && existingArea.polygon.length > 0) {
+                        // 绘制多边形
+                        drawPolygon(map, existingArea.polygon);
+                        setDrawType('polygon');
+                        drawTypeRef.current = 'polygon'; // 同步 ref
+                    } else if (existingArea.radius) {
+                        // 绘制圆形
+                        drawCircle(map, existingArea.center, existingArea.radius);
+                        setDrawType('circle');
+                        drawTypeRef.current = 'circle'; // 同步 ref
+                    }
                 } else {
-                    console.log('无已有区域，等待用户点击地图选择');
+                    // 如果是新建，且默认为圆形模式
+                    if(drawTypeRef.current === 'circle') {
+                         // 默认不绘制，等点击
+                    } else {
+                        startDrawPolygon(map);
+                    }
                 }
             });
 
-            // 添加点击事件
+            // 绑定点击事件（仅在圆形模式下用于定点）
             map.on('click', (e: any) => {
-                const lng = e.lnglat.getLng();
-                const lat = e.lnglat.getLat();
-                
-                // 从 ref 获取最新的半径值，避免闭包问题
-                const latestRadius = currentRadiusRef.current;
-                console.log('地图点击位置:', lng, lat, '使用半径:', latestRadius, '米');
-
-                // 清除旧的标记和圆形
-                if (markerRef.current) {
-                    map.remove(markerRef.current);
+                if (drawTypeRef.current === 'circle') {
+                    const lng = e.lnglat.getLng();
+                    const lat = e.lnglat.getLat();
+                    const latestRadius = currentRadiusRef.current;
+                    
+                    addCenterMarker(map, lng, lat);
+                    drawCircle(map, { lng, lat }, latestRadius);
                 }
-                if (circleRef.current) {
-                    map.remove(circleRef.current);
-                }
-
-                // 添加新标记
-                addCenterMarker(map, lng, lat);
-
-                // 使用最新的半径值绘制圆形
-                drawCircle(map, { lng, lat }, latestRadius);
             });
 
-            console.log('地图初始化成功');
         } catch (error) {
             console.error('地图初始化错误:', error);
             message.error('地图初始化失败');
         }
     };
 
-    // 绘制圆形区域
-    const drawCircle = (map: any, center: { lng: number; lat: number }, radius: number) => {
-        try {
-            console.log('开始绘制圆形 - 中心:', center, '半径(米):', radius);
-            
-            // 清除旧的圆形
-            if (circleRef.current) {
-                map.remove(circleRef.current);
-                circleRef.current = null;
+    // 切换绘制模式
+    const handleDrawTypeChange = (e: any) => {
+        const type = e.target.value;
+        setDrawType(type);
+        drawTypeRef.current = type; // 同步 ref
+        
+        const map = mapInstanceRef.current;
+        if (!map) return;
+
+        // 清除所有覆盖物
+        if (circleRef.current) {
+            map.remove(circleRef.current);
+            circleRef.current = null;
+        }
+        if (polygonRef.current) {
+            map.remove(polygonRef.current);
+            polygonRef.current = null;
+        }
+        if (polygonEditorRef.current) {
+            polygonEditorRef.current.close();
+            polygonEditorRef.current = null;
+        }
+        if (mouseToolRef.current) {
+            mouseToolRef.current.close(true);
+        }
+
+        if (type === 'polygon') {
+            setIsDrawing(true);
+            startDrawPolygon(map);
+        } else {
+            setIsDrawing(false);
+            // 切换回圆形，如果之前有标记点，则以此为圆心画圆
+            if (markerRef.current) {
+                const { lng, lat } = extractLngLat(markerRef.current.getPosition());
+                drawCircle(map, { lng, lat }, currentRadiusRef.current);
             }
+        }
+    };
 
-            // 创建圆形覆盖物
-            const circle = new window.AMap.Circle({
-                center: [center.lng, center.lat],
-                radius: radius,
-                fillColor: '#1890ff',
-                fillOpacity: 0.4,
-                strokeColor: '#0050b3',
-                strokeWeight: 3,
-                strokeOpacity: 0.9,
-                zIndex: 10,
-            });
+    // 绘制圆形
+    const drawCircle = (map: any, center: { lng: number; lat: number }, radius: number) => {
+        if (circleRef.current) map.remove(circleRef.current);
 
-            // 添加到地图
-            map.add(circle);
-            circleRef.current = circle;
+        const circle = new window.AMap.Circle({
+            center: [center.lng, center.lat],
+            radius: radius,
+            fillColor: '#1890ff',
+            fillOpacity: 0.4,
+            strokeColor: '#0050b3',
+            strokeWeight: 3,
+            strokeOpacity: 0.9,
+            zIndex: 10,
+        });
 
-            // 在圆形上绑定点击事件，支持点击蓝色区域重新选择配送中心
-            circle.on('click', (e: any) => {
+        map.add(circle);
+        circleRef.current = circle;
+
+        // 圆形点击逻辑保持一致
+        circle.on('click', (e: any) => {
+            if(drawTypeRef.current === 'circle') {
                 const lng = e.lnglat.getLng();
                 const lat = e.lnglat.getLat();
-
                 const latestRadius = currentRadiusRef.current;
-                console.log('圆形点击位置:', lng, lat, '使用半径:', latestRadius, '米');
-
-                // 清除旧的标记和圆形
-                if (markerRef.current) {
-                    map.remove(markerRef.current);
-                }
-                if (circleRef.current) {
-                    map.remove(circleRef.current);
-                }
-
-                // 添加新标记
                 addCenterMarker(map, lng, lat);
-
-                // 使用最新的半径值重新绘制圆形
                 drawCircle(map, { lng, lat }, latestRadius);
-            });
-            
-            console.log('圆形已添加到地图');
-            
-            // 调整视野以适应圆形
-            setTimeout(() => {
-                try {
-                    map.setFitView([circle], false, [60, 60, 60, 60]);
-                    console.log('视野已调整');
-                } catch (e) {
-                    console.error('调整视野失败:', e);
-                }
-            }, 100);
+            }
+        });
+        
+        map.setFitView([circle], false, [60, 60, 60, 60]);
+    };
 
-            console.log('圆形绘制成功');
-        } catch (error) {
-            console.error('绘制圆形失败:', error);
-            message.error('绘制配送范围失败');
+    // 绘制多边形（用于回显）
+    const drawPolygon = (map: any, path: any[]) => {
+        if (polygonRef.current) map.remove(polygonRef.current);
+
+        const polygon = new window.AMap.Polygon({
+            path: path.map(p => [p.lng, p.lat]),
+            fillColor: '#1890ff',
+            fillOpacity: 0.4,
+            strokeColor: '#0050b3',
+            strokeWeight: 3,
+            strokeOpacity: 0.9,
+            zIndex: 10,
+        });
+
+        map.add(polygon);
+        polygonRef.current = polygon;
+        
+        // 初始化编辑器
+        initPolygonEditor(map, polygon);
+        
+        map.setFitView([polygon], false, [60, 60, 60, 60]);
+    };
+
+    // 初始化多边形编辑器
+    const initPolygonEditor = (map: any, polygon: any) => {
+        if (polygonEditorRef.current) {
+            polygonEditorRef.current.close();
         }
+        
+        const polygonEditor = new window.AMap.PolygonEditor(map, polygon);
+        polygonEditorRef.current = polygonEditor;
+        polygonEditor.open();
+        setIsDrawing(false);
+    };
+
+    // 开始绘制新多边形
+    const startDrawPolygon = (map: any) => {
+        if (!window.AMap.MouseTool) return;
+
+        if (mouseToolRef.current) {
+            mouseToolRef.current.close(true);
+        }
+
+        const mouseTool = new window.AMap.MouseTool(map);
+        mouseToolRef.current = mouseTool;
+
+        mouseTool.polygon({
+            fillColor: '#1890ff',
+            fillOpacity: 0.4,
+            strokeColor: '#0050b3',
+            strokeWeight: 3,
+            strokeOpacity: 0.9,
+        });
+
+        message.info('请在地图上点击绘制多边形，双击结束绘制');
+
+        mouseTool.on('draw', (event: any) => {
+            // 绘制完成后
+            const polygon = event.obj;
+            polygonRef.current = polygon;
+            
+            // 关闭绘制工具
+            mouseTool.close(false); // false保留覆盖物
+            
+            // 开启编辑模式
+            initPolygonEditor(map, polygon);
+            
+            // 计算多边形中心点作为标记点
+            const path = polygon.getPath();
+            const center = calculateCentroid(path);
+            addCenterMarker(map, center.lng, center.lat);
+        });
+    };
+
+    // 重新绘制多边形
+    const handleRedrawPolygon = () => {
+        const map = mapInstanceRef.current;
+        if (!map) return;
+        
+        if (polygonRef.current) {
+            map.remove(polygonRef.current);
+            polygonRef.current = null;
+        }
+        if (polygonEditorRef.current) {
+            polygonEditorRef.current.close();
+            polygonEditorRef.current = null;
+        }
+        
+        setIsDrawing(true);
+        startDrawPolygon(map);
+    };
+
+    // 计算多边形质心
+    const calculateCentroid = (path: any[]) => {
+        let lngSum = 0;
+        let latSum = 0;
+        const len = path.length;
+        path.forEach(p => {
+            lngSum += extractLngLat(p).lng;
+            latSum += extractLngLat(p).lat;
+        });
+        return {
+            lng: lngSum / len,
+            lat: latSum / len
+        };
     };
 
     // 保存即时配送区域
     const handleSaveInstantArea = () => {
-        if (!circleRef.current || !markerRef.current) {
-            message.warning('请在地图上点击选择配送中心位置');
-            return;
+        let center: { lng: number; lat: number } | null = null;
+        let radius: number | undefined = undefined;
+        let polygonPath: Array<{ lng: number; lat: number }> | undefined = undefined;
+
+        if (drawType === 'circle') {
+            if (!circleRef.current || !markerRef.current) {
+                message.warning('请在地图上点击选择配送中心位置');
+                return;
+            }
+            radius = circleRef.current.getRadius();
+            center = extractLngLat(markerRef.current.getPosition());
+        } else {
+            if (!polygonRef.current) {
+                message.warning('请绘制配送多边形范围');
+                return;
+            }
+            // 获取编辑后的多边形路径
+            const path = polygonRef.current.getPath();
+            if (!path || path.length < 3) {
+                message.warning('多边形至少需要3个点');
+                return;
+            }
+            
+            polygonPath = path.map((p: any) => extractLngLat(p));
+            // 如果有标记点用标记点，没有则计算质心
+            if (markerRef.current) {
+                center = extractLngLat(markerRef.current.getPosition());
+            } else {
+                center = calculateCentroid(path);
+            }
         }
 
-        const radius = circleRef.current.getRadius();
-        const { lng, lat } = extractLngLat(markerRef.current.getPosition());
+        if (!center) return;
 
         // 使用高德地图的逆地理编码获取城市信息
         window.AMap.plugin('AMap.Geocoder', () => {
             const geocoder = new window.AMap.Geocoder();
-            geocoder.getAddress([lng, lat], (status: string, result: any) => {
+            geocoder.getAddress([center!.lng, center!.lat], (status: string, result: any) => {
                 let cityName = '未知城市';
                 let cityCode = '';
 
@@ -410,22 +552,16 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
                     const { cityName: resolvedCityName, cityCode: resolvedCityCode } = resolveCityInfo(
                         result.regeocode.addressComponent,
                     );
-                    if (resolvedCityName) {
-                        cityName = resolvedCityName;
-                    }
-                    if (resolvedCityCode) {
-                        cityCode = resolvedCityCode;
-                    }
+                    if (resolvedCityName) cityName = resolvedCityName;
+                    if (resolvedCityCode) cityCode = resolvedCityCode;
                 }
 
                 const newArea = {
                     cityName,
                     cityCode,
-                    center: {
-                        lng,
-                        lat,
-                    },
-                    radius,
+                    center: center!,
+                    radius: drawType === 'circle' ? radius : undefined,
+                    polygon: drawType === 'polygon' ? polygonPath : undefined,
                 };
 
                 const instantAreas = form.getFieldValue('instantCoverageAreas') || [];
@@ -449,15 +585,12 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
         form.setFieldsValue({ instantCoverageAreas: instantAreas });
     };
 
-    // 更新半径
     const handleRadiusChange = (radius: number) => {
         const radiusInMeters = radius * 1000;
         setCurrentRadius(radiusInMeters);
-        currentRadiusRef.current = radiusInMeters; // 同步更新 ref，确保地图点击事件能获取最新值
+        currentRadiusRef.current = radiusInMeters;
         
-        console.log('半径已更新为:', radiusInMeters, '米');
-        
-        if (circleRef.current && markerRef.current && mapInstanceRef.current) {
+        if (drawType === 'circle' && circleRef.current && markerRef.current && mapInstanceRef.current) {
             const { lng, lat } = extractLngLat(markerRef.current.getPosition());
             drawCircle(mapInstanceRef.current, { lng, lat }, radiusInMeters);
         }
@@ -571,7 +704,11 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
                                                 >
                                                     <div>
                                                         <div>城市: {area.cityName}</div>
-                                                        <div>配送半径: {(area.radius / 1000).toFixed(1)} 公里</div>
+                                                        {area.polygon ? (
+                                                             <div>类型: 多边形范围</div>
+                                                        ) : (
+                                                             <div>类型: 圆形 (半径: {(area.radius / 1000).toFixed(1)} km)</div>
+                                                        )}
                                                         <div>
                                                             中心坐标: ({area.center.lng.toFixed(6)}, {area.center.lat.toFixed(6)})
                                                         </div>
@@ -606,28 +743,46 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
                 cancelText="取消"
             >
                 <div style={{ marginBottom: 16 }}>
-                    <Space>
-                        <span>配送半径（公里）:</span>
-                        <InputNumber
-                            min={0.5}
-                            max={50}
-                            step={0.5}
-                            value={currentRadius / 1000}
-                            onChange={(value) => handleRadiusChange(value || 5)}
-                        />
-                        <span style={{ color: '#999', fontSize: 12 }}>
-                            当前: {(currentRadius / 1000).toFixed(1)} 公里
-                        </span>
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                        <Space>
+                            <span>区域类型:</span>
+                            <Radio.Group value={drawType} onChange={handleDrawTypeChange}>
+                                <Radio.Button value="circle">圆形区域</Radio.Button>
+                                <Radio.Button value="polygon">多边形区域</Radio.Button>
+                            </Radio.Group>
+                        </Space>
+
+                        {drawType === 'circle' ? (
+                            <Space>
+                                <span>配送半径（公里）:</span>
+                                <InputNumber
+                                    min={0.5}
+                                    max={50}
+                                    step={0.5}
+                                    value={currentRadius / 1000}
+                                    onChange={(value) => handleRadiusChange(value || 5)}
+                                />
+                                <span style={{ color: '#999', fontSize: 12 }}>
+                                    当前: {(currentRadius / 1000).toFixed(1)} 公里
+                                </span>
+                            </Space>
+                        ) : (
+                            <Space>
+                                <Button onClick={handleRedrawPolygon} size="small" icon={<EditOutlined />}>
+                                    重新绘制
+                                </Button>
+                                <span style={{ color: '#666', fontSize: 12 }}>
+                                    {isDrawing ? '请在地图点击绘制点，双击完成' : '拖动白色节点调整形状'}
+                                </span>
+                            </Space>
+                        )}
+                        
+                        <div style={{ color: '#999', fontSize: 12 }}>
+                            {drawType === 'circle' 
+                                ? '💡 点击地图选择中心点，拖动滑块调整半径' 
+                                : '💡 绘制闭合多边形表示配送范围，支持编辑调整'}
+                        </div>
                     </Space>
-                    <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
-                        💡 <strong>使用说明:</strong>
-                        <br />
-                        • <strong>编辑模式:</strong> 地图将自动显示已有的配送范围（蓝色圆圈）
-                        <br />
-                        • <strong>修改位置:</strong> 点击地图上的新位置重新选择配送中心
-                        <br />
-                        • <strong>调整半径:</strong> 使用上方滑块调整配送半径，圆圈会实时更新
-                    </div>
                 </div>
                 <div
                     ref={mapRef}
@@ -636,6 +791,7 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
                         height: '500px',
                         border: '1px solid #d9d9d9',
                         borderRadius: '4px',
+                        position: 'relative'
                     }}
                 />
             </Modal>
