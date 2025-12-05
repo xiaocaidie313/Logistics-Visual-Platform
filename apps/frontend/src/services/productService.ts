@@ -1,12 +1,5 @@
-import axios from 'axios';
-// 配置axios拦截器 加入token
-axios.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
-  if(token){
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-},error => Promise.reject(error))
+import axios from '../utils/request';
+
 
 const API_BASE_URL = 'http://localhost:3002/api/admin';
 

@@ -1,32 +1,65 @@
-import axios from 'axios';
+import axios from '../utils/request';
 
-// 配置axios拦截器 加入token
-axios.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
-  if(token){
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-},error => Promise.reject(error))
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;// api/admin
 
 export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'confirmed' | 'delivered' | 'cancelled' | 'refunded';
 
+// 订单项接口
+export interface OrderItem {
+  productId: string;
+  skuid: string;
+  skuName: string;
+  price: number;
+  quantity: number;
+  totalPrice: number;
+  images: string[];
+}
+
+// 收货地址接口
+export interface ShippingAddress {
+  contactName: string;
+  contactPhone: string;
+  province: string;
+  city: string;
+  district: string;
+  street?: string;
+  detailAddress: string;
+  fullAddress: string;
+}
+
 export interface Order {
   _id?: string;
-  id: string;
-  skuname: string;
+  id?: string;
   orderId: string;
-  price: number;
-  amount: number;
-  totprice: number;
-  images: string;
-  arrivetime: string;
-  sendtime: string;
-  ordertime: string;
-  useraddress: string;
-  sendaddress: string;
+  userId?: string;
+  merchantId?: string;
+  // 订单项数组（后端主要结构）
+  items: OrderItem[];
+  totalAmount: number;
+  shippingAddress: ShippingAddress;
+  senderAddress: string;
   status: OrderStatus;
+  orderTime: Date | string;
+  paymentTime?: Date | string;
+  shipmentTime?: Date | string;
+  deliveryTime?: Date | string;
+  remark?: string;
+  cancelReason?: string;
+  refundReason?: string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  
+  // 兼容旧字段（如果后端返回了扁平结构）
+  skuname?: string;
+  price?: number;
+  amount?: number;
+  totprice?: number;
+  images?: string;
+  arrivetime?: string;
+  sendtime?: string;
+  ordertime?: string;
+  useraddress?: string;
+  sendaddress?: string;
 }
 
 export interface ApiResponse<T> {
