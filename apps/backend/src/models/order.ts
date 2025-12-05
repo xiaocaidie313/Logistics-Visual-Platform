@@ -82,6 +82,26 @@ const orderSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    skuname:{
+      type: String,
+      required: true,
+    },
+    images:{
+      type: String,
+      default: '',
+    },
+    price:{
+      type: Number,
+      required: true,
+    },
+    amount:{
+      type: Number,
+      required: true,
+    },
+    totprice:{
+      type: Number,
+      required: true,
+    },
     // 商户信息  // 谁卖的
     merchantId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -129,6 +149,14 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    useraddress:{
+      type: String,
+      required: true,
+    },
+    sendaddress:{
+      type: String,
+      required: true,
+    },
     // 订单项 一个订单有多个商品
     items: {
       type: [orderItemSchema],
@@ -152,8 +180,14 @@ const orderSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    sendtime:{
+      type: Date,
+    },
+    arrivetime:{
+      type: Date,
+    },
     // 时间信息
-    orderTime: {
+    ordertime: {
       type: Date,
       required: true,
       default: Date.now,
