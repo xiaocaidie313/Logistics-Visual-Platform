@@ -6,7 +6,7 @@ import Product from '../src/models/product.js';
 
 const MONGODB_URI = "mongodb://lms:123lms@47.109.143.184:27017/logistics";
 const merchantId = '692b16f39c40f2f39f6f629f';
-const customerId = '692b188eee40540c8a6d6d54';
+const customerId = '692b18c008eae97f7862f9c3';
 // 生成订单Id
 const generateOrderId = () => {
   // 使用时间戳 + 随机数确保唯一性
@@ -97,6 +97,9 @@ const addOrder = async () => {
       const quantity = Math.floor(Math.random() * 5) + 1;
       const itemTotalPrice = selectedSku.price * quantity;
 
+      // 获取商品图片（商品级别的 images 字段）
+      const productImages = product.images ? [product.images] : [];
+      
       items.push({
         productId: product._id.toString(),
         skuid: selectedSku._id?.toString() || selectedSku.skuid || `SKU${Date.now() + index}`,
@@ -104,7 +107,7 @@ const addOrder = async () => {
         price: selectedSku.price,
         quantity: quantity,
         totalPrice: itemTotalPrice,
-        images: []
+        images: productImages // 使用商品图片数组
       });
 
       totalAmount += itemTotalPrice;
@@ -127,11 +130,19 @@ const addOrder = async () => {
       ? `${merchantAddress.province || '北京市'}${merchantAddress.city || '北京市'}${merchantAddress.district || '海淀区'}${merchantAddress.detailAddress || '中关村大街1号'}`
       : '北京市北京市海淀区中关村大街1号';
 
-    // 7. 创建订单数据
+    // 7. 获取第一个商品信息（用于兼容字段）
+    const firstItem = items[0];
+    const firstProduct = selectedProducts[0];
+    
+    // 8. 创建订单数据（同时包含新旧字段格式）
     const orderData = {
       orderId: generateOrderId(),
       userId: customer._id,
       merchantId: merchant._id,
+      // 新格式：items 数组
+      items: items,
+      totalAmount: totalAmount,
+      // 新格式：收货地址对象
       shippingAddress: {
         contactName: defaultAddress.contactName,
         contactPhone: defaultAddress.contactPhone,
@@ -142,15 +153,25 @@ const addOrder = async () => {
         detailAddress: defaultAddress.detailAddress,
         fullAddress: fullAddress
       },
+      // 新格式：发货地址字符串
       senderAddress: senderAddress,
-      items: items,
-      totalAmount: totalAmount,
+      // 兼容旧格式：扁平字段
+      skuname: firstItem?.skuName || firstProduct?.productName || '',
+      images: firstProduct?.images || firstItem?.images?.[0] || '', // 商品图片或第一个订单项的图片
+      price: firstItem?.price || 0,
+      amount: items.reduce((sum, item) => sum + item.quantity, 0),
+      totprice: totalAmount,
+      useraddress: fullAddress,
+      sendaddress: senderAddress,
+      // 时间字段
+      ordertime: new Date(),
+      // 订单状态
       status: 'pending',
-      orderTime: new Date(),
+      // 备注
       remark: '测试订单'
     };
 
-    // 8. 检查订单ID是否已存在，如果存在则重新生成
+    // 9. 检查订单ID是否已存在，如果存在则重新生成
     let orderId = generateOrderId();
     let existingOrder = await Order.findOne({ orderId });
     let retryCount = 0;
@@ -165,7 +186,7 @@ const addOrder = async () => {
     }
     orderData.orderId = orderId;
 
-    // 9. 处理数据库索引问题（删除有问题的 id_1 索引）
+    // 10. 处理数据库索引问题（删除有问题的 id_1 索引）
     try {
       const db = mongoose.connection.db;
       if (db) {
@@ -187,7 +208,7 @@ const addOrder = async () => {
       console.log('索引操作警告（可忽略）');
     }
 
-    // 10. 创建并保存订单
+    // 11. 创建并保存订单
     const newOrder = new Order(orderData);
     const savedOrder = await newOrder.save();
 
@@ -212,5 +233,9 @@ const addOrder = async () => {
 };
 
 // 执行添加订单
-addOrder();
+console.log('=====开始执行添加订单脚本=====');
+addOrder().catch((error) => {
+  console.error('未捕获的错误:', error);
+  process.exit(1);
+});
 
