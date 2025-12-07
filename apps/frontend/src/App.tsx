@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/Admin";
+import UserDashboard from "./pages/UserMobile/User";
+import UserHomeDetail from "./pages/UserMobile/UserHomeDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./App.css";
-
+import OrderTrack from "./pages/UserMobile/orderTrack";
 function App() {
   return (
     <BrowserRouter>
@@ -16,6 +18,30 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer"
+          element={
+            <ProtectedRoute>
+              <UserDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/detail/ordertrack/:id"
+          element={
+            <ProtectedRoute>
+              <OrderTrack/>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/detail/product/:id"
+          element={
+            <ProtectedRoute>
+              <UserHomeDetail/>
             </ProtectedRoute>
           }
         />

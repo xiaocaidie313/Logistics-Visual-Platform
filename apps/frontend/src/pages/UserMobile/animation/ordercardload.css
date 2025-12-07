@@ -1,0 +1,28 @@
+.orderTrackCard {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.15);
+    max-height: 40vh;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    /* 动画过渡 */
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+/* 加载中的状态：卡片在底部外面（隐藏） */
+.orderTrackCard.loading {
+    transform: translateY(100%);
+    opacity: 0;
+}
+
+/* 加载完成后的状态：卡片滑入显示 */
+.orderTrackCard:not(.loading) {
+    transform: translateY(0);
+    opacity: 1;
+}

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import UserTrackService from '../../services/user/trackService.js';
 import { sendResponse } from '../../utils/index.js';
+import { checkAndStartSimulation } from '../../services/simulationService.js';
 
 export class UserTrackController {
   // 根据id查询
@@ -17,6 +18,10 @@ export class UserTrackController {
         sendResponse(res, 404, '未找到物流信息', {});
         return;
       }
+      
+      // 如果 track 状态是 shipped 或 delivering，自动启动模拟
+      checkAndStartSimulation(track);
+      
       sendResponse(res, 200, 'Success', track);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : '获取物流信息失败';
@@ -38,6 +43,12 @@ export class UserTrackController {
         sendResponse(res, 404, '未找到物流信息', {});
         return;
       }
+      
+      // 为每个 track 检查并启动模拟
+      tracks.forEach((track: any) => {
+        checkAndStartSimulation(track);
+      });
+      
       sendResponse(res, 200, 'Success', tracks);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : '获取物流信息失败';

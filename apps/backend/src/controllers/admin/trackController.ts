@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
-import TrackService from '../services/trackService.js';
+import TrackService from '../../services/admin/trackService.js';
 import { sendResponse } from '../../utils/index.js';
+import { checkAndStartSimulation } from '../../services/simulationService.js';
 
 export class TrackController {
   // 创建物流记录
@@ -28,6 +29,10 @@ export class TrackController {
         sendResponse(res, 404, '未找到物流信息', {});
         return;
       }
+      
+      // 如果 track 状态是 shipped 或 delivering，自动启动模拟
+      checkAndStartSimulation(track);
+      
       sendResponse(res, 200, 'Success', track);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : '获取物流信息失败';

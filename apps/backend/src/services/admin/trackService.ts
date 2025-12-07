@@ -1,18 +1,84 @@
-import TrackInfo from '../models/track.js';
+import TrackInfo from '../../models/track.js';
 import {
   emitLogisticsUpdate,
   emitLogisticsStatusChange,
   emitLogisticsTrackAdded,
-} from './websocket.js';
+} from '../websocket.js';
+import {
+  planRoute,
+  extractProvince,
+  extractDistrictHub,
+  extractCity,
+} from '../../utils/geoService.js';
+import { startSimulation } from '../simulationService.js';
 
 export class TrackService {
   // 创建物流记录
   async createTrack(trackData: any): Promise<any> {
-    const newTrack = new TrackInfo(trackData);
+    // 步骤 1: 提取地址信息
+    const districtHub = extractDistrictHub(trackData.userAddress);
+    const province = extractProvince(trackData.userAddress);
+
+    // 步骤 2: 判断是否同城配送
+    const startCity = extractCity(trackData.sendAddress);
+    const endCity = extractCity(trackData.userAddress);
+    const isSameCity = startCity && endCity && (startCity.includes(endCity) || endCity.includes(startCity));
+
+    // 步骤 3: 规划配送路径（调用高德地图 API）
+    const routeData = await planRoute(trackData.sendAddress, trackData.userAddress, true);
+
+    // 步骤 4: 生成初始物流描述文案
+    let startDesc = "";
+    if (isSameCity) {
+      // 同城配送文案
+      startDesc = `同城急送，快递员已揽件，正发往【${trackData.userAddress}】`;
+    } else {
+      // 跨城配送文案
+      let targetName = districtHub;
+      if (routeData.transitStops && routeData.transitStops.length > 0 && routeData.transitStops[0]) {
+        targetName = routeData.transitStops[0].hubName;
+      }
+      startDesc = `商家已发货，正发往【${targetName}】`;
+    }
+
+    // 步骤 5: 合并路径数据到 trackData
+    const newTrackData = {
+      ...trackData,
+      // 确保有 id 和 orderId
+      id: trackData.id || `T-${Date.now()}`,
+      orderId: trackData.orderId || `ORD-${Date.now()}`,
+      // 地址信息
+      province,
+      districtHub,
+      // 同城标记
+      isSameCity,
+      // 坐标信息
+      startCoords: routeData.startCoords,
+      endCoords: routeData.endCoords,
+      currentCoords: routeData.startCoords, // 初始位置在起点
+      // 路径数据
+      path: routeData.path,
+      transitStops: routeData.transitStops,
+      // 初始物流状态
+      logisticsStatus: trackData.logisticsStatus || 'shipped',
+      // 初始物流轨迹
+      tracks: trackData.tracks || [{
+        time: new Date(),
+        location: trackData.sendAddress || '',
+        description: startDesc,
+        status: 'shipped'
+      }]
+    };
+
+    // 步骤 6: 创建并保存 track
+    const newTrack = new TrackInfo(newTrackData);
     const savedTrack = await newTrack.save();
 
-    // 推送 WebSocket 事件
+    // 步骤 7: 推送 WebSocket 事件
     emitLogisticsUpdate(savedTrack.logisticsNumber, savedTrack);
+
+    // 步骤 8: 启动车辆移动模拟（自动模拟车辆沿路径移动）
+    startSimulation(savedTrack);
 
     return savedTrack;
   }

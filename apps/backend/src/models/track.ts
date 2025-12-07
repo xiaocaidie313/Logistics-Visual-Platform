@@ -83,7 +83,59 @@ const trackSchema = new mongoose.Schema({
             type:String,
             required:false,
         }
-    }]
+    }],
+    // 地图可视化相关字段  仿照platform里面的
+    // 起点坐标 [经度, 纬度]
+    startCoords: {
+        type: [Number],
+        required: false,
+    },
+    // 终点坐标 [经度, 纬度]
+    endCoords: {
+        type: [Number],
+        required: false,
+    },
+    // 当前车辆位置 [经度, 纬度]
+    currentCoords: {
+        type: [Number],
+        required: false,
+    },
+    // 配送路径坐标数组 [[lng, lat], [lng, lat], ...]
+    path: {
+        type: [[Number]],
+        default: [],
+    },
+    // 省份（用于统计）
+    province: {
+        type: String,
+        required: false,
+    },
+    // 区域集散点
+    districtHub: {
+        type: String,
+        required: false,
+    },
+    // 集散点到达时间
+    hubArrivalTime: {
+        type: Date,
+        required: false,
+    },
+    // 中转站信息
+    transitStops: [{
+        stepIndex: {
+            type: Number,
+            required: false,
+        },
+        hubName: {
+            type: String,
+            required: false,
+        }
+    }],
+    // 是否同城配送
+    isSameCity: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const TrackInfo = mongoose.model('Track', trackSchema);

@@ -32,7 +32,7 @@ const UserTracking: React.FC = () => {
         orderIdRef.current = id;
         fetchOrder(id);
         connectWebSocket(id);
-
+        console.log("order:", order);
         return () => {
             if (wsRef.current) wsRef.current.close();
         };
