@@ -108,6 +108,11 @@ export class UserInfoService {
     return removeSensitiveInfo(user.toObject());
   }
 
+  // 获取商家用户信息
+  async getMerchantById(merchantId: string): Promise<any> {
+    const user = await UserInfo.findOne({ _id: merchantId });
+    return user;
+  }
   // 获取用户信息列表
   async getUserList(): Promise<any> {
     const users = await UserInfo.find();

@@ -1,6 +1,6 @@
-.home-detail-item {
+.home-detail-item{
     width: 100%;
-    height: 100vh;
+    height: 90vh;
     position: relative;
     background-color: #fff;
     padding: 16px;
@@ -14,19 +14,32 @@
     flex-shrink: 0;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
-    transform: translateX(-20%) scale(0.7);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+    transform: translateY(-50%) scale(0.7);
     opacity: 0;
 }
 
-/* 加载完成后的状态：滑入并显示 */
-.home-detail-item:not(.loading) {
+/* .home-detail-item:not(.loading) {
     transform: translateX(0) scale(1);
+    opacity: 1;
+} */
+
+.home-detail-item.loading  {
+    transform: translateY(0) scale(1);
     opacity: 1;
 }
 
-/* 加载中的状态：初始位置（隐藏） */
-.home-detail-item.loading {
-    transform: translateX(20%) scale(0.9);
-    opacity: 0;
+/* 图片容器的玻璃蒙版效果 */
+.glass-image-container {
+    background: rgba(34, 21, 9, 0.15);
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+    /* border: 1px solid rgba(255, 255, 255, 0.5); */
+    box-shadow: 0 8px 32px 0 rgba(34, 21, 9, 0.37);
+}
+
+/* 购买成功 Modal 样式 */
+/*  控制太查看到 .ant-modal-content 的样式 然后直接覆盖 */
+.purchase-success-modal .ant-modal-content {
+    border-radius: 12px;
 }

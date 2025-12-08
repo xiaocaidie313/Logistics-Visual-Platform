@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
+import axios from 'axios';
 import TrackInfo, { ITrack } from './models/Track';
 import { planRoute, extractProvince, extractDistrictHub, extractCity, solveTSP, getDrivingRoute, generateLine } from './utils/geoService';
 

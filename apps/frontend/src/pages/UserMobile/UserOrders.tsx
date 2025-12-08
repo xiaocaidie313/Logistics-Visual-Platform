@@ -13,7 +13,7 @@ const UserOrders: React.FC = () => {
     if (userInfo) {
       try {
         const user = JSON.parse(userInfo);
-        console.log(user);
+        console.log('用户信息:', user);
         return user._id || user.id;
       } catch (e) {
         console.error('解析用户信息失败:', e);
@@ -36,8 +36,9 @@ const UserOrders: React.FC = () => {
         //发送请求
       const response = await getOrderList(userId);
       if (response.code === 200) {
-        console.log(response.data);
-        setOrders(response.data || []);
+        console.log("response.data", response.data);
+        const showData = response.data.reverse();
+        setOrders(showData || []);
       } else {
         setError(response.message || '获取订单列表失败');
       }

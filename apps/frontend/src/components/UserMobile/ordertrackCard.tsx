@@ -21,8 +21,27 @@ interface OrdertrackCardProps {
   loading: boolean;
 }
 
+// 状态映射配置
+const statusConfig = {
+  pending: { color: 'blue', text: '运输中' },
+  paid: { color: 'processing', text: '已支付' },
+  shipped: { color: 'blue', text: '已发货' },
+  confirmed: { color: 'cyan', text: '已确认' },
+  delivered: { color: 'success', text: '已送达' },
+  cancelled: { color: 'error', text: '已取消' },
+  refunded: { color: 'warning', text: '已退款' },
+} as const;
+
+// 获取状态文本和颜色
+const getStatusInfo = (status?: string): { color: string; text: string } => {
+  const orderStatus = (status || 'pending') as keyof typeof statusConfig;
+  // 确保总是返回有效的配置
+  return statusConfig[orderStatus] || statusConfig['delivered'];
+};
+
 const OrdertrackCard = ({ order, track, loading }: OrdertrackCardProps) => {
   const status = order?.status || "pending";
+  const statusInfo = getStatusInfo(status);
   const [stepItems, setStepItems] = useState<Array<{
     title: string;
     description: string;
@@ -127,7 +146,7 @@ const OrdertrackCard = ({ order, track, loading }: OrdertrackCardProps) => {
                       {track?.logisticsNumber || order?.orderId || ""}
                     </div>
                   </div>
-                  <Tag color="processing">{status}</Tag>
+                  <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
                 </div>
 
                 {/* 发货/收货地址 */}

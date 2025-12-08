@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { UserOutlined, PhoneOutlined, EnvironmentOutlined, EditOutlined } from "@ant-design/icons";
-import { getUser } from "../../services/userService";
-import type { User } from "../../services/userService";
+import { UserOutlined, PhoneOutlined, EnvironmentOutlined, EditOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { message, Popconfirm } from "antd";
+import { getUser, addUserAddress, updateUserAddress, deleteUserAddress, setDefaultAddress } from "../../services/userService";
+import type { User, Address } from "../../services/userService";
+import AddressFormModal from "../../components/UserMobile/AddressFormModal";
 
 const UserProfile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [addressModalMode, setAddressModalMode] = useState<'add' | 'edit'>('add');
+  const [editingAddress, setEditingAddress] = useState<Address | undefined>(undefined);
 
   // 获取用户ID
   const getUserId = () => {
@@ -39,9 +44,10 @@ const UserProfile: React.FC = () => {
       } else {
         setError(response.message || "获取用户信息失败");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "获取用户信息失败";
       console.error("获取用户信息失败:", err);
-      setError(err.message || "获取用户信息失败");
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -49,6 +55,7 @@ const UserProfile: React.FC = () => {
 
   useEffect(() => {
     loadUserInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 加载中状态
@@ -88,6 +95,101 @@ const UserProfile: React.FC = () => {
         return "其他";
       default:
         return "未设置";
+    }
+  };
+
+  // 处理添加地址
+  const handleAddAddress = () => {
+    setAddressModalMode('add');
+    setEditingAddress(undefined);
+    setAddressModalOpen(true);
+  };
+
+  // 处理编辑地址
+  const handleEditAddress = (address: Address) => {
+    setAddressModalMode('edit');
+    setEditingAddress(address);
+    setAddressModalOpen(true);
+  };
+
+  // 处理删除地址
+  const handleDeleteAddress = async (addressId: string) => {
+    const userId = getUserId();
+    if (!userId || !addressId) {
+      message.error("操作失败");
+      return;
+    }
+
+    try {
+      const response = await deleteUserAddress(userId, addressId);
+      if (response.code === 200) {
+        message.success("地址删除成功");
+        setUser(response.data);
+      } else {
+        message.error(response.message || "删除地址失败");
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "删除地址失败";
+      console.error("删除地址失败:", err);
+      message.error(errorMessage);
+    }
+  };
+
+  // 处理设置默认地址
+  const handleSetDefaultAddress = async (addressId: string) => {
+    const userId = getUserId();
+    if (!userId || !addressId) {
+      message.error("操作失败");
+      return;
+    }
+
+    try {
+      const response = await setDefaultAddress(userId, addressId);
+      if (response.code === 200) {
+        message.success("默认地址设置成功");
+        setUser(response.data);
+      } else {
+        message.error(response.message || "设置默认地址失败");
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "设置默认地址失败";
+      console.error("设置默认地址失败:", err);
+      message.error(errorMessage);
+    }
+  };
+
+  // 处理保存地址（添加或更新）
+  const handleSaveAddress = async (addressData: Address) => {
+    const userId = getUserId();
+    if (!userId) {
+      message.error("操作失败");
+      return;
+    }
+
+    try {
+      let response;
+      if (addressModalMode === 'add') {
+        response = await addUserAddress(userId, addressData);
+      } else {
+        // 编辑模式：先删除再添加
+        if (!editingAddress?._id) {
+          message.error("地址ID不存在");
+          return;
+        }
+        response = await updateUserAddress(userId, editingAddress._id, addressData);
+      }
+
+      if (response.code === 200) {
+        message.success(addressModalMode === 'add' ? "地址添加成功" : "地址更新成功");
+        setUser(response.data);
+        setAddressModalOpen(false);
+      } else {
+        message.error(response.message || "操作失败");
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "保存地址失败";
+      console.error("保存地址失败:", err);
+      message.error(errorMessage);
     }
   };
 
@@ -208,7 +310,10 @@ const UserProfile: React.FC = () => {
             <EnvironmentOutlined style={{ marginRight: "8px", fontSize: "18px" }} />
             收货地址
           </div>
-          <EditOutlined style={{ fontSize: "16px", color: "#999", cursor: "pointer" }} />
+          <PlusOutlined
+            style={{ fontSize: "18px", color: "#1890ff", cursor: "pointer" }}
+            onClick={handleAddAddress}
+          />
         </div>
 
         {user.addresses && user.addresses.length > 0 ? (
@@ -241,19 +346,48 @@ const UserProfile: React.FC = () => {
                   >
                     {address.contactName}
                   </div>
-                  {address.isDefault && (
-                    <span
-                      style={{
-                        fontSize: "12px",
-                        color: "#1890ff",
-                        backgroundColor: "#e6f7ff",
-                        padding: "2px 8px",
-                        borderRadius: "4px",
-                      }}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {address.isDefault && (
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: "#1890ff",
+                          backgroundColor: "#e6f7ff",
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        默认
+                      </span>
+                    )}
+                    {!address.isDefault && (
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: "#1890ff",
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                        }}
+                        onClick={() => address._id && handleSetDefaultAddress(address._id)}
+                      >
+                        设为默认
+                      </span>
+                    )}
+                    <EditOutlined
+                      style={{ fontSize: "14px", color: "#1890ff", cursor: "pointer" }}
+                      onClick={() => handleEditAddress(address)}
+                    />
+                    <Popconfirm
+                      title="确定要删除这个地址吗？"
+                      onConfirm={() => address._id && handleDeleteAddress(address._id)}
+                      okText="确定"
+                      cancelText="取消"
                     >
-                      默认
-                    </span>
-                  )}
+                      <DeleteOutlined
+                        style={{ fontSize: "14px", color: "#ff4d4f", cursor: "pointer" }}
+                      />
+                    </Popconfirm>
+                  </div>
                 </div>
                 <div
                   style={{
@@ -289,6 +423,15 @@ const UserProfile: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* 地址编辑模态框 */}
+      <AddressFormModal
+        open={addressModalOpen}
+        mode={addressModalMode}
+        initialValues={editingAddress}
+        onCancel={() => setAddressModalOpen(false)}
+        onSuccess={handleSaveAddress}
+      />
     </div>
   );
 };

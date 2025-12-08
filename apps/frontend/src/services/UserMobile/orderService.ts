@@ -1,5 +1,5 @@
 import axios from "../../utils/request";
-const API_BASE_URL = 'http://localhost:3002/api/user';
+const API_BASE_URL = 'http://localhost:3002/api';
 
 export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'confirmed' | 'delivered' | 'cancelled' | 'refunded';
 
@@ -63,6 +63,24 @@ export interface Order {
 
 export const getOrderList = async (userId: string) => {
     ///order/my/:userId
-    const response = await axios.get(`${API_BASE_URL}/order/my/${userId}`);
+    const response = await axios.get(`${API_BASE_URL}/user/order/my/${userId}`);
+    return response.data;
+}
+
+// 创建订单
+export const createOrder = async (orderData: Omit<Order, '_id'>) => {
+    const response = await axios.post(`${API_BASE_URL}/user/order`, orderData);
+    return response.data;
+}
+
+// 获取商家详情
+export const getMerchantDetail = async (merchantId: string) => {
+    const response = await axios.get(`${API_BASE_URL}/admin/userInfo/get/merchant/${merchantId}`);
+    return response.data;
+}
+
+// 创建物流订单
+export const createTrack = async (trackData: any) => {
+    const response = await axios.post(`${API_BASE_URL}/admin/track`, trackData);
     return response.data;
 }

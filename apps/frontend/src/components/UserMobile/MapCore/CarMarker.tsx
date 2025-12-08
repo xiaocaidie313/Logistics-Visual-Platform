@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import carImg from '../../../assets/images/car.png';
 
-const carImg = "https://a.amap.com/jsapi_demos/static/demo-center-v2/car.png";
-
+// const carImg = "https://a.amap.com/jsapi_demos/static/demo-center-v2/car.png";
 interface CarMarkerProps {
     map: any;
     AMap: any;
@@ -19,7 +19,7 @@ const CarMarker: React.FC<CarMarkerProps> = ({ map, AMap, position }) => {
             map: map,
             position: position,
             icon: new AMap.Icon({
-                size: new AMap.Size(52, 26),
+                size: new AMap.Size(70, 50),
                 image: carImg,
                 imageSize: new AMap.Size(26, 13),
             }),

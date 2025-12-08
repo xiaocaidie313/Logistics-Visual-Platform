@@ -86,6 +86,25 @@ export class UserInfoController {
     }
   }
 
+// 获取商家用户信息
+async getMerchant(req: Request, res: Response): Promise<void> {
+  try {
+    const { merchantId } = req.params;
+    if (!merchantId) {
+      sendResponse(res, 400, '商家ID不能为空', {});
+      return;
+    }
+    const user = await UserInfoService.getMerchantById(merchantId);
+    if (!user) {
+      sendResponse(res, 404, '商家用户信息不存在', {});
+      return;
+    }
+    sendResponse(res, 200, 'Success', user);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '获取商家用户信息失败';
+    sendResponse(res, 400, errorMessage, {});
+  }
+}
   // 根据用户名获取用户信息
   async getUserByUsername(req: Request, res: Response): Promise<void> {
     try {

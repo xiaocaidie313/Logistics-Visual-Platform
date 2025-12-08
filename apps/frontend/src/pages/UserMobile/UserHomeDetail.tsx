@@ -10,11 +10,24 @@ const UserHomeDetail = () => {
     const [data, setData] = useState<Product[]>([]);
     const navigate = useNavigate();
     const location = useLocation()
-    // const { product } = location.state || {};
+    const { product, cardInfo } = location.state || {};
+
+
+    const handleProdocuts = (products:Product[])=>{
+        if(products.length > 0 && products.find((item:Product)=>item._id === product._id)){
+          const newProducts = [product, ...products.filter((item:Product)=>item._id !== product._id)]  
+          setData(newProducts)
+        }else{
+          setData(products)
+        }
+    }
     const loadData = async  ()=>{
         const res = await getHomeData()
         if(res.code === 200){
-            setData(res.data.products);
+
+          handleProdocuts(res.data.products);
+            // setData(res.data.products);
+            console.log("我是 product",product);
             console.log("我是 setData",res.data.products);
         }
     }
@@ -38,12 +51,11 @@ const UserHomeDetail = () => {
     <LeftOutlined
         onClick={() => navigate(-1)}
         style={{
-        
           position: "fixed",
-          top: "20px",
-          left: "20px",
+          top: "30px",
+          left: "30px",
           fontSize: "20px",
-          color: "white",
+          color: "#333",
           cursor: "pointer",
           backgroundColor: "rgba(255, 255, 255, 0)",
           borderRadius: "50%",
@@ -64,7 +76,11 @@ const UserHomeDetail = () => {
       }}>
       {
         data && data?.map((item: Product, index: number)=>(
-            <UserHomeDetailItem key={item?._id} data={item} index={index} />
+            <UserHomeDetailItem 
+                key={item?._id} 
+                data={item} 
+                index={index}
+            />
         ))
       }
         </div>

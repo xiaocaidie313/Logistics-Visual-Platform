@@ -43,7 +43,7 @@ const UserHeader: React.FC<UserHeaderProps> = ({ activeTab = 'orders' }) => {
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)', 
       zIndex: 1000,
     }}>
-      {isDetail && <LeftOutlined onClick={() => navigate(-1)} style={{ fontSize: '20px', margin: '10px', position: 'absolute', left: '10px' }} />}
+      {/* {isDetail && <LeftOutlined onClick={() => navigate(-1)} style={{ fontSize: '20px', margin: '10px', position: 'absolute', left: '10px' }} />} */}
       <div style={{
         fontSize: '18px',
         fontWeight: 600,

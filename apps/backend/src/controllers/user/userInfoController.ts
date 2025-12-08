@@ -81,6 +81,7 @@ export class UserUserInfoController {
     }
   }
 
+
   // 根据用户名获取用户信息
   async getUserByUsername(req: Request, res: Response): Promise<void> {
     try {
@@ -102,6 +103,7 @@ export class UserUserInfoController {
     }
   }
 }
+
 
 export default new UserUserInfoController();
 

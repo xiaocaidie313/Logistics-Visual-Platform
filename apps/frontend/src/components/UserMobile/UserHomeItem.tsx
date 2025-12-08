@@ -17,10 +17,21 @@ const UserHomeItem = ({ data }: UserHomeItemProps) => {
 
   return (
     <div
-        onClick = {()=>{
+        onClick = {(e)=>{
+            // 获取卡片的位置和尺寸信息
+            const cardElement = e.currentTarget;
+            const rect = cardElement.getBoundingClientRect();
+            const cardInfo = {
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height,
+            };
+            
             navigate(`/customer/detail/product/${data?._id}`, {
                 state: {
                     product: data,
+                    cardInfo: cardInfo, // 传递卡片位置信息
                 },
             });
         }}

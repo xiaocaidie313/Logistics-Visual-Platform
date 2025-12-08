@@ -31,4 +31,7 @@ router.delete('/userInfo/:id/address/:addressId', auth, UserInfoController.delet
 // 设置默认地址
 router.put('/userInfo/:id/address/:addressId/default', auth, UserInfoController.setDefaultAddress.bind(UserInfoController));
 
+// 获取商家用户信息
+router.get('/userInfo/get/merchant/:merchantId', auth, UserInfoController.getMerchant.bind(UserInfoController));
+
 export default router;

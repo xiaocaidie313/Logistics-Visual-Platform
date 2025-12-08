@@ -19,7 +19,7 @@ export const useAMap = (containerId: string) => {
                     zoom: 11,
                     center: [116.397428, 39.90923],
                     viewMode: '3D',
-                    pitch: 50, // 增加倾斜角，3D效果更强
+                    pitch: 20, // 增加倾斜角，3D效果更强
                 });
                 mapInstance.addControl(new AMap.Scale());
                 mapInstance.addControl(new AMap.ToolBar());
