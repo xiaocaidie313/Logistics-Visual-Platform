@@ -23,11 +23,11 @@ interface OrdertrackCardProps {
 
 // 状态映射配置
 const statusConfig = {
-  pending: { color: 'blue', text: '运输中' },
+  pending: { color: 'default', text: '待支付' },
   paid: { color: 'processing', text: '已支付' },
-  shipped: { color: 'blue', text: '已发货' },
+  shipped: { color: 'blue', text: '运输中' },
   confirmed: { color: 'cyan', text: '已确认' },
-  delivered: { color: 'success', text: '已送达' },
+  delivered: { color: 'orange', text: '已送达' },
   cancelled: { color: 'error', text: '已取消' },
   refunded: { color: 'warning', text: '已退款' },
 } as const;
@@ -146,7 +146,7 @@ const OrdertrackCard = ({ order, track, loading }: OrdertrackCardProps) => {
                       {track?.logisticsNumber || order?.orderId || ""}
                     </div>
                   </div>
-                  <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
+                  <Tag style={{borderRadius: "10px", display:'flex',alignItems: "center",justifyContent: "center",  border: "1px solid #e0e0e0",boxShadow: "0 0 10px 0 rgba(0, 0, 0, 0.1)", fontSize: "14px", width: "90px", height: "40px", lineHeight: "30px", textAlign: "center"}} color={statusInfo.color}>{statusInfo.text}</Tag>
                 </div>
 
                 {/* 发货/收货地址 */}

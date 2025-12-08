@@ -1,8 +1,10 @@
 import TrackInfo from '../../models/track.js';
+import Order from '../../models/order.js';
 import {
   emitLogisticsUpdate,
   emitLogisticsStatusChange,
   emitLogisticsTrackAdded,
+  emitOrderStatusChange,
 } from '../websocket.js';
 import {
   planRoute,
@@ -74,10 +76,26 @@ export class TrackService {
     const newTrack = new TrackInfo(newTrackData);
     const savedTrack = await newTrack.save();
 
-    // 步骤 7: 推送 WebSocket 事件
+    // 步骤 7: 同步更新订单状态（如果订单状态是 paid，更新为 shipped）
+    if (savedTrack.orderId) {
+      try {
+        const order = await Order.findOne({ orderId: savedTrack.orderId });
+        if (order && order.status === 'paid') {
+          order.status = 'shipped';
+          order.shipmentTime = new Date();
+          await order.save();
+          emitOrderStatusChange(order.orderId, 'shipped', order);
+          console.log(`[订单状态同步] 订单 ${order.orderId} 状态已更新为 shipped`);
+        }
+      } catch (error) {
+        console.error(`[订单状态同步失败] 订单 ${savedTrack.orderId}:`, error);
+      }
+    }
+
+    // 步骤 8: 推送 WebSocket 事件
     emitLogisticsUpdate(savedTrack.logisticsNumber, savedTrack);
 
-    // 步骤 8: 启动车辆移动模拟（自动模拟车辆沿路径移动）
+    // 步骤 9: 启动车辆移动模拟（自动模拟车辆沿路径移动）
     startSimulation(savedTrack);
 
     return savedTrack;
@@ -155,6 +173,22 @@ export class TrackService {
     emitLogisticsTrackAdded(track.logisticsNumber, trackNode);
     if (trackNode.status) {
       emitLogisticsStatusChange(track.logisticsNumber, trackNode.status, updatedTrack);
+      
+      // 同步更新订单状态
+      if (trackNode.status === 'delivered' && track.orderId) {
+        try {
+          const order = await Order.findOne({ orderId: track.orderId });
+          if (order && order.status !== 'delivered') {
+            order.status = 'delivered';
+            order.deliveryTime = new Date();
+            await order.save();
+            emitOrderStatusChange(order.orderId, 'delivered', order);
+            console.log(`[订单状态同步] 订单 ${order.orderId} 状态已更新为 delivered`);
+          }
+        } catch (error) {
+          console.error(`[订单状态同步失败] 订单 ${track.orderId}:`, error);
+        }
+      }
     }
 
     return updatedTrack;

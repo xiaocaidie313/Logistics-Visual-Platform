@@ -1,9 +1,31 @@
 // 车辆移动模拟服务
 import TrackInfo from '../models/track.js';
-import { emitLogisticsUpdate } from './websocket.js';
+import Order from '../models/order.js';
+import { emitLogisticsUpdate, emitOrderStatusChange } from './websocket.js';
 
 // 保存所有正在运行的模拟任务
 const activeSimulations = new Map<string, NodeJS.Timeout>();
+
+/**
+ * 同步更新订单状态
+ * 当物流状态变为 delivered 时，自动更新对应的订单状态
+ */
+const syncOrderStatusToDelivered = async (orderId: string) => {
+  if (!orderId) return;
+  
+  try {
+    const order = await Order.findOne({ orderId });
+    if (order && order.status !== 'delivered') {
+      order.status = 'delivered';
+      order.deliveryTime = new Date();
+      await order.save();
+      emitOrderStatusChange(order.orderId, 'delivered', order);
+      console.log(`[订单状态同步] 订单 ${order.orderId} 状态已更新为 delivered`);
+    }
+  } catch (error) {
+    console.error(`[订单状态同步失败] 订单 ${orderId}:`, error);
+  }
+};
 
 /**
  * 步骤 1: 启动车辆移动模拟
@@ -80,7 +102,7 @@ export const startSimulation = (track: any) => {
             status: 'delivered',
             operator: '同城骑手'
           };
-          await TrackInfo.findByIdAndUpdate(
+          const updatedTrack = await TrackInfo.findByIdAndUpdate(
             track._id,
             {
               $set: { logisticsStatus: 'delivered', currentCoords: finalPoint },
@@ -88,7 +110,11 @@ export const startSimulation = (track: any) => {
             },
             { new: true }
           );
-          emitLogisticsUpdate(track.logisticsNumber, await TrackInfo.findById(track._id));
+          emitLogisticsUpdate(track.logisticsNumber, updatedTrack);
+          // 同步更新订单状态
+          if (updatedTrack?.orderId) {
+            await syncOrderStatusToDelivered(updatedTrack.orderId);
+          }
           console.log(`[同城签收] ${track.id}`);
         }
         return;
@@ -107,7 +133,7 @@ export const startSimulation = (track: any) => {
             status: 'delivered',
             operator: '快递员'
           };
-          await TrackInfo.findByIdAndUpdate(
+          const updatedTrack = await TrackInfo.findByIdAndUpdate(
             track._id,
             {
               $set: { logisticsStatus: 'delivered', currentCoords: finalPoint },
@@ -115,7 +141,11 @@ export const startSimulation = (track: any) => {
             },
             { new: true }
           );
-          emitLogisticsUpdate(track.logisticsNumber, await TrackInfo.findById(track._id));
+          emitLogisticsUpdate(track.logisticsNumber, updatedTrack);
+          // 同步更新订单状态
+          if (updatedTrack?.orderId) {
+            await syncOrderStatusToDelivered(updatedTrack.orderId);
+          }
           console.log(`[签收] ${track.id} 结束`);
         }
       }
@@ -132,7 +162,7 @@ export const startSimulation = (track: any) => {
             status: 'delivered',
             operator: '快递员'
           };
-          await TrackInfo.findByIdAndUpdate(
+          const updatedTrack = await TrackInfo.findByIdAndUpdate(
             track._id,
             {
               $set: { logisticsStatus: 'delivered', currentCoords: finalPoint },
@@ -140,7 +170,11 @@ export const startSimulation = (track: any) => {
             },
             { new: true }
           );
-          emitLogisticsUpdate(track.logisticsNumber, await TrackInfo.findById(track._id));
+          emitLogisticsUpdate(track.logisticsNumber, updatedTrack);
+          // 同步更新订单状态
+          if (updatedTrack?.orderId) {
+            await syncOrderStatusToDelivered(updatedTrack.orderId);
+          }
           console.log(`[签收] ${track.id} 结束`);
         }
       }

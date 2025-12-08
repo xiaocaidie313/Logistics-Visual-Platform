@@ -2,14 +2,30 @@ import Order from "../../models/order.js";
 import {
   emitOrderCreated,
   emitOrderUpdate,
+  emitOrderStatusChange,
 } from "../websocket.js";
 
 export class UserOrderService {
   // 创建订单
   async createOrder(orderData: any): Promise<any> {
+    // 如果订单数据中没有指定状态，默认设置为 paid（已支付）
+    const isStatusNotSet = !orderData.status;
+    if (isStatusNotSet) {
+      orderData.status = 'paid';
+      orderData.paymentTime = new Date();
+    }
+    
     const newOrder = new Order(orderData);
     const savedOrder = await newOrder.save();
+    
+    // 推送订单创建事件
     emitOrderCreated(savedOrder.orderId, savedOrder);
+    
+    // 如果状态被设置为 paid，推送状态变更事件
+    if (isStatusNotSet && savedOrder.status === 'paid') {
+      emitOrderStatusChange(savedOrder.orderId, 'paid', savedOrder);
+    }
+    
     return savedOrder;
   }
 

@@ -19,12 +19,20 @@ const OrderTrack: React.FC = () => {
   const [path, setPath] = useState<[number, number][]>([]);
   const [track, setTrack] = useState<Track | null>(null);
   const [cardLoading, setCardLoading] = useState(true);
+  const [orderState, setOrderState] = useState(order); // 使用 state 来保存订单状态，以便实时更新
   // WebSocket 相关
   const socketRef = useRef<Socket | null>(null); // 保存 WebSocket 连接实例
   const trackIdRef = useRef<string | null>(null); // 保存当前跟踪的 track ID（用于过滤消息）
   
   // 初始化高德地图
   const { map, AMap } = useAMap("order-track-map-container");
+
+  // 当 order 变化时，同步更新 orderState
+  useEffect(() => {
+    if (order) {
+      setOrderState(order);
+    }
+  }, [order]);
 
   useEffect(() => {
     if (!order) {
@@ -254,6 +262,33 @@ const OrderTrack: React.FC = () => {
         });
       }
     });
+    
+    // 步骤 17: 监听订单状态变更事件（重要！用于更新订单状态显示）
+    socket.on('order:status:changed', (data: {
+      orderId: string;
+      status: string;
+      orderData?: {
+        orderId?: string;
+        status?: string;
+        [key: string]: unknown;
+      };
+      timestamp: Date;
+    }) => {
+      console.log('收到订单状态变更:', data);
+      // 只处理当前订单的状态变更
+      if (data.orderId === orderId) {
+        // 更新订单状态
+        setOrderState((prevOrder: typeof order | null) => {
+          if (!prevOrder) return prevOrder;
+          return {
+            ...prevOrder,
+            ...(data.orderData || {}),
+            status: data.status,
+          };
+        });
+        console.log('订单状态已更新为:', data.status);
+      }
+    });
   };
   return (
     <div
@@ -341,7 +376,7 @@ const OrderTrack: React.FC = () => {
         />
 
         {/* 卡片内容区域 - 可滚动 */}
-        <OrdertrackCard order={order} track={track} loading={loading} />
+        <OrdertrackCard order={orderState} track={track} loading={loading} />
       </div>
     </div>
   );

@@ -83,6 +83,7 @@ const genTradeOrder = async (data: any, addressList: any, userId: string) => {
       }
 
       // 步骤9: 构建完整的订单数据
+      // 注意：不设置 status 字段，让后端自动设置为 paid（已支付）
       return  {
         orderId: orderId,
         userId: userId,
@@ -93,7 +94,7 @@ const genTradeOrder = async (data: any, addressList: any, userId: string) => {
         senderAddress: senderAddress,
         useraddress: shippingAddress.fullAddress,
         sendaddress: senderAddress,
-        status: "pending",
+        // status 字段不设置，后端会自动设置为 'paid'
         orderTime: new Date().toISOString(),
         ordertime: new Date().toISOString(), // 兼容后端字段
         skuname: selectedSku.skuName,

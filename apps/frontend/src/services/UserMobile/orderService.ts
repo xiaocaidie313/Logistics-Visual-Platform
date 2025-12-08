@@ -37,7 +37,7 @@ export interface Order {
   totalAmount: number;
   shippingAddress: ShippingAddress;
   senderAddress: string;
-  status: OrderStatus;
+  status?: OrderStatus; // 可选字段，后端会自动设置为 'paid'
   orderTime: Date | string;
   paymentTime?: Date | string;
   shipmentTime?: Date | string;
