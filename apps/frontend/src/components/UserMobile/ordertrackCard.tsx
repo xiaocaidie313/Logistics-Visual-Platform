@@ -26,6 +26,8 @@ const statusConfig = {
   pending: { color: 'default', text: '待支付' },
   paid: { color: 'processing', text: '已支付' },
   shipped: { color: 'blue', text: '运输中' },
+  waiting_for_delivery: { color: 'purple', text: '等待派送' },
+  delivering: { color: 'geekblue', text: '派送中' },
   confirmed: { color: 'cyan', text: '已确认' },
   delivered: { color: 'orange', text: '已送达' },
   cancelled: { color: 'error', text: '已取消' },
@@ -34,13 +36,14 @@ const statusConfig = {
 
 // 获取状态文本和颜色
 const getStatusInfo = (status?: string): { color: string; text: string } => {
-  const orderStatus = (status || 'pending') as keyof typeof statusConfig;
+  const orderStatus = (status || 'shipped') as keyof typeof statusConfig;
   // 确保总是返回有效的配置
-  return statusConfig[orderStatus] || statusConfig['delivered'];
+  return statusConfig[orderStatus] || statusConfig['shipped'];
 };
 
 const OrdertrackCard = ({ order, track, loading }: OrdertrackCardProps) => {
-  const status = order?.status || "pending";
+  const status = track?.logisticsStatus || order?.status || "shipped";
+  console.log(" ordertrackCard status:", status);
   const statusInfo = getStatusInfo(status);
   const [stepItems, setStepItems] = useState<Array<{
     title: string;

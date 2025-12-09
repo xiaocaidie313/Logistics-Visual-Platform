@@ -13,6 +13,7 @@ import mongoose from "mongoose";
 import { createServer } from "http";
 import routes from './routes/index.js';
 import { WebSocketServer } from './services/websocket.js';
+import { startDispatchScheduler } from './services/simulationService.js';
 
 const app = express();
 const PORT = 3002;  // 定义端口
@@ -61,6 +62,10 @@ app.get("/", (req, res) => {
 
 // 初始化 WebSocket
 WebSocketServer(httpServer);
+
+// 启动派送调度器
+startDispatchScheduler();
+console.log('派送调度器已启动（每10秒检查一次）');
 
 // 启动服务器
 httpServer.listen(PORT, () => {

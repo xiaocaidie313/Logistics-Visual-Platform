@@ -23,7 +23,7 @@ const trackSchema = new mongoose.Schema({
     logisticsStatus:{
         type:String,
         enum:{
-            values:["pending", "paid", "shipped", "confirmed", "delivered", "cancelled", "refunded"],
+            values:["pending", "paid", "shipped", "waiting_for_delivery", "delivering", "confirmed", "delivered", "cancelled", "refunded"],
             default:"pending",
         },
         required:true,
@@ -77,7 +77,7 @@ const trackSchema = new mongoose.Schema({
         },
         status:{
             type:String,
-            enum:["pending", "paid", "shipped", "confirmed", "delivered", "cancelled", "refunded"],
+            enum:["pending", "paid", "shipped", "waiting_for_delivery", "delivering", "confirmed", "delivered", "cancelled", "refunded"],
         },
         operator:{
             type:String,

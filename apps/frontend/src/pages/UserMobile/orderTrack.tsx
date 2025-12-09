@@ -61,7 +61,6 @@ const OrderTrack: React.FC = () => {
         
         if (trackData?.path && Array.isArray(trackData.path) && trackData.path.length > 0) {
           // path 可能是嵌套数组，需要展平
-          // 例如: [[[lng1,lat1], [lng2,lat2], ...], [[lng101,lat101], ...]]
           // 需要展平成: [[lng1,lat1], [lng2,lat2], ..., [lng101,lat101], ...]
           trackData.path.forEach((item: unknown) => {
             if (Array.isArray(item)) {
@@ -152,7 +151,7 @@ const OrderTrack: React.FC = () => {
     }
     
     // 创建新的 WebSocket 连接
-    // 注意：后端使用 Socket.IO，端口是 3002
+    // 注意：后端使用 Socket.IO  端口是 3002
     const socket = io('http://localhost:3002', {
       transports: ['websocket'], // 强制使用 WebSocket 传输
       reconnection: true, // 自动重连
@@ -165,7 +164,7 @@ const OrderTrack: React.FC = () => {
     socket.on('connect', () => {
       console.log('WebSocket 连接成功，Socket ID:', socket.id);
       
-      // 步骤 7: 加入订单房间（可选，如果需要监听订单更新）
+      // 步骤 7: 加入订单房间（
       socket.emit('join:order', orderId);
       
       // 步骤 8: 加入物流跟踪房间（重要！用于接收物流更新）
@@ -194,8 +193,7 @@ const OrderTrack: React.FC = () => {
       console.log('WebSocket 断开连接:', reason);
     });
     
-    // 步骤 11: 监听物流更新事件（最重要！）
-    // 后端推送的事件名是 'logistics:updated'
+    // 步骤 11: 监听物流更新事件
     socket.on('logistics:updated', (data: {
       trackingNumber: string;
       logisticsData: Track;
@@ -203,7 +201,7 @@ const OrderTrack: React.FC = () => {
     }) => {
       console.log('收到物流更新:', data);
       
-      // 步骤 12: 过滤消息（只处理当前 track 的更新）
+      // 步骤 12: 过滤消息
       // 后端推送的数据格式：{ trackingNumber, logisticsData, timestamp }
       if (data.trackingNumber === trackIdRef.current && data.logisticsData) {
         const logisticsData = data.logisticsData;
