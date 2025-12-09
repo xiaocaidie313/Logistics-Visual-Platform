@@ -53,13 +53,13 @@ const OrderStatistics: React.FC<OrderStatisticsProps> = ({ orders }) => {
     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
       {statisticsData.map((stat, index) => (
         <Col xs={24} sm={12} lg={6} key={index}>
-          <Card bordered={false} style={{ background: stat.color }}>
+          <Card variant="filled" style={{ background: stat.color }}>
             <Statistic
               title={<span style={{ fontSize: 14, fontWeight: 500 }}>{stat.title}</span>}
               value={stat.value}
               prefix={stat.prefix}
               precision={stat.precision}
-              valueStyle={{ fontSize: 24, fontWeight: 600 }}
+              styles={{ content: { fontSize: 24, fontWeight: 600 } }}
               suffix={stat.icon}
             />
           </Card>

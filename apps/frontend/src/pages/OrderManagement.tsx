@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Table,
   Button,
@@ -23,6 +23,7 @@ import {
   FilterOutlined,
   SortAscendingOutlined,
   MoreOutlined,
+  WifiOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { MenuProps } from 'antd';
@@ -39,6 +40,7 @@ import {
   getOrdersByStatus,
 } from '../services/orderService';
 import dayjs from 'dayjs';
+import { io, Socket } from 'socket.io-client';
 
 const OrderManagement: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -51,6 +53,8 @@ const OrderManagement: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+  const [wsConnected, setWsConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
 
   const statusConfig: Record<OrderStatus, { color: string; text: string }> = {
     pending: { color: 'default', text: '待支付' },
@@ -82,8 +86,93 @@ const OrderManagement: React.FC = () => {
     }
   };
 
+  // 初始化WebSocket连接
   useEffect(() => {
+    // 加载订单数据
     loadOrders();
+
+    // 连接WebSocket
+    const socket = io('http://localhost:3002', {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+    });
+
+    socketRef.current = socket;
+
+    // 连接成功
+    socket.on('connect', () => {
+      console.log('[订单管理] WebSocket 连接成功');
+      setWsConnected(true);
+    });
+
+    // 连接失败
+    socket.on('connect_error', (error) => {
+      console.error('[订单管理] WebSocket 连接失败:', error);
+      setWsConnected(false);
+    });
+
+    // 断开连接
+    socket.on('disconnect', (reason) => {
+      console.log('[订单管理] WebSocket 断开连接:', reason);
+      setWsConnected(false);
+    });
+
+    // 监听订单创建事件
+    socket.on('order:created', (data: { orderId: string; orderData: Order; timestamp: Date }) => {
+      console.log('[订单管理] 收到新订单:', data);
+      setOrders((prevOrders) => [data.orderData, ...prevOrders]);
+      message.success(`新订单创建：${data.orderId}`);
+    });
+
+    // 监听订单状态变更事件
+    socket.on('order:status:changed', (data: {
+      orderId: string;
+      status: string;
+      orderData?: Order;
+      timestamp: Date;
+    }) => {
+      console.log('[订单管理] 收到订单状态变更:', data);
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.orderId === data.orderId
+            ? { ...order, ...(data.orderData || {}), status: data.status as OrderStatus }
+            : order
+        )
+      );
+      
+      // 如果详情抽屉打开且是当前订单，更新详情
+      if (detailOrder && detailOrder.orderId === data.orderId) {
+        setDetailOrder({ ...detailOrder, ...(data.orderData || {}), status: data.status as OrderStatus });
+      }
+      
+      message.info(`订单 ${data.orderId} 状态更新为：${statusConfig[data.status as OrderStatus]?.text || data.status}`);
+    });
+
+    // 监听订单更新事件
+    socket.on('order:updated', (data: { orderId: string; orderData: Order; timestamp: Date }) => {
+      console.log('[订单管理] 收到订单更新:', data);
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.orderId === data.orderId ? { ...order, ...data.orderData } : order
+        )
+      );
+      
+      // 如果详情抽屉打开且是当前订单，更新详情
+      if (detailOrder && detailOrder.orderId === data.orderId) {
+        setDetailOrder({ ...detailOrder, ...data.orderData });
+      }
+    });
+
+    // 组件卸载时清理
+    return () => {
+      if (socketRef.current) {
+        console.log('[订单管理] 关闭 WebSocket 连接');
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 处理状态筛选
@@ -321,6 +410,11 @@ const OrderManagement: React.FC = () => {
           <Space>
             <span style={{ fontSize: '18px', fontWeight: 600 }}>订单列表</span>
             <Tag color="blue">{filteredOrders.length} 个订单</Tag>
+            {wsConnected ? (
+              <Tag icon={<WifiOutlined />} color="success">实时连接</Tag>
+            ) : (
+              <Tag color="default">离线</Tag>
+            )}
           </Space>
         }
         extra={
@@ -391,6 +485,16 @@ const OrderManagement: React.FC = () => {
         open={drawerOpen}
         order={detailOrder}
         onClose={() => setDrawerOpen(false)}
+        onOrderUpdate={(updatedOrder) => {
+          // 更新订单列表中的订单
+          setOrders((prevOrders) =>
+            prevOrders.map((order) =>
+              order.orderId === updatedOrder.orderId ? updatedOrder : order
+            )
+          );
+          // 更新详情订单
+          setDetailOrder(updatedOrder);
+        }}
       />
     </div>
   );
