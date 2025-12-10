@@ -8,7 +8,7 @@ import {
 export class UserOrderService {
   // 创建订单
   async createOrder(orderData: any): Promise<any> {
-    // 如果订单数据中没有指定状态，默认设置为 paid（已支付）
+    // 如果订单数据中没有指定状态，默认设置为 paid
     const isStatusNotSet = !orderData.status;
     if (isStatusNotSet) {
       orderData.status = 'paid';

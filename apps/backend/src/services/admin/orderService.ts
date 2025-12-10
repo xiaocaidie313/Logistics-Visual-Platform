@@ -8,6 +8,10 @@ import {
 export class OrderService {
   // 创建订单
   async createOrder(orderData: any): Promise<any> {
+    // 如果没有指定状态，默认设置为 paid（已支付）
+    if (!orderData.status) {
+      orderData.status = 'paid';
+    }
     const newOrder = new Order(orderData);
     const savedOrder = await newOrder.save();
     emitOrderCreated(savedOrder.orderId, savedOrder);
@@ -105,6 +109,15 @@ export class OrderService {
   async getOrdersByUserId(userId: string): Promise<any> {
     const orders = await Order.find({ userId })
       .populate('userId', 'username phoneNumber')
+      .sort({ orderTime: -1 });
+    return orders;
+  }
+
+  // 根据商家ID获取订单
+  async getOrdersByMerchantId(merchantId: string): Promise<any> {
+    const orders = await Order.find({ merchantId })
+      .populate('userId', 'username phoneNumber')
+      .populate('merchantId', 'username phoneNumber')
       .sort({ orderTime: -1 });
     return orders;
   }

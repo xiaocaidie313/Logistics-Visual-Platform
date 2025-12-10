@@ -8,6 +8,7 @@ interface ProductFormModalProps {
   visible: boolean;
   product: Product | null;
   merchants: User[];
+  merchantId?: string; // 可选的merchantId，如果传入则自动设置并隐藏商家选择
   onClose: () => void;
   onSubmit: (productData: Partial<Product>) => void;
 }
@@ -23,6 +24,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   visible,
   product,
   merchants,
+  merchantId,
   onClose,
   onSubmit,
 }) => {
@@ -42,17 +44,21 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         setSkus(product.skus || []);
       } else {
         form.resetFields();
+        // 如果传入了merchantId，自动设置
+        if (merchantId) {
+          form.setFieldsValue({ merchantId });
+        }
         setSkus([]);
       }
     }
-  }, [visible, product, form]);
+  }, [visible, product, form, merchantId]);
 
   const handleAddSku = () => {
     const newSku: SKU = {
       skuName: '',
       price: 0,
       stock: 0,
-    };
+    } as SKU;
     setSkus([...skus, newSku]);
   };
 
@@ -63,8 +69,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const handleUpdateSku = (index: number, field: keyof SKU, value: any) => {
     const newSkus = [...skus];
-    newSkus[index] = { ...newSkus[index], [field]: value };
-    setSkus(newSkus);
+    const currentSku = newSkus[index];
+    if (currentSku) {
+      newSkus[index] = { ...currentSku, [field]: value } as SKU;
+      setSkus(newSkus);
+    }
   };
 
   const handleSubmit = async () => {
@@ -79,7 +88,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       // 验证 SKU 信息
       for (let i = 0; i < skus.length; i++) {
         const sku = skus[i];
-        if (!sku.skuName || sku.price <= 0) {
+        if (!sku || !sku.skuName || sku.price <= 0) {
           message.error(`SKU ${i + 1} 信息不完整，请填写 SKU 名称和价格`);
           return;
         }
@@ -87,7 +96,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
       const productData: Partial<Product> = {
         productName: values.productName,
-        merchantId: values.merchantId,
+        merchantId: merchantId || values.merchantId, // 优先使用传入的merchantId
         category: values.category,
         description: values.description,
         status: values.status,
@@ -176,7 +185,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       onOk={handleSubmit}
       onCancel={onClose}
       width={700}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" autoComplete="off">
         <Form.Item
@@ -190,19 +199,21 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           <Input placeholder="请输入商品名称" />
         </Form.Item>
 
-        <Form.Item
-          name="merchantId"
-          label="所属商家"
-          rules={[{ required: true, message: '请选择所属商家' }]}
-        >
-          <Select placeholder="请选择所属商家" showSearch optionFilterProp="children">
-            {merchants.map((merchant) => (
-              <Select.Option key={merchant._id} value={merchant._id}>
-                {merchant.username}
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
+        {!merchantId && (
+          <Form.Item
+            name="merchantId"
+            label="所属商家"
+            rules={[{ required: true, message: '请选择所属商家' }]}
+          >
+            <Select placeholder="请选择所属商家" showSearch optionFilterProp="children">
+              {merchants.map((merchant) => (
+                <Select.Option key={merchant._id} value={merchant._id}>
+                  {merchant.username}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+        )}
 
         <Form.Item
           name="category"

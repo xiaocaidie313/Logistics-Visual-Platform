@@ -25,6 +25,11 @@ export interface Track {
   endCoords?: number[];
   // 物流轨迹数组
   tracks?: TrackNode[];
+  // 取件码相关字段
+  pickupCode?: string;
+  pickupCodeGeneratedAt?: Date | string;
+  pickupCodeExpiresAt?: Date | string;
+  pickupLocation?: string;
   // ... 其他字段
 }
 

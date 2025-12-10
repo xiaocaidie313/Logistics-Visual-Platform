@@ -44,19 +44,19 @@ export interface ApiResponse<T> {
 
 // 创建用户
 export const createUser = async (userData: Omit<User, '_id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<User>> => {
-  const response = await axios.post(`${API_BASE_URL}/userInfo`, userData);
+  const response = await axios.post(`${API_BASE_URL}/admin/userInfo`, userData);
   return response.data;
 };
 
 // 更新用户信息
 export const updateUser = async (id: string, userData: Partial<User>): Promise<ApiResponse<User>> => {
-  const response = await axios.put(`${API_BASE_URL}/userInfo/update/${id}`, userData);
+  const response = await axios.put(`${API_BASE_URL}/admin/userInfo/update/${id}`, userData);
   return response.data;
 };
 
 // 删除用户
 export const deleteUser = async (id: string): Promise<ApiResponse<User>> => {
-  const response = await axios.delete(`${API_BASE_URL}/userInfo/delete/${id}`);
+  const response = await axios.delete(`${API_BASE_URL}/admin/userInfo/delete/${id}`);
   return response.data;
 };
 
@@ -68,13 +68,13 @@ export const getUser = async (id: string): Promise<ApiResponse<User>> => {
 
 // 根据用户名获取用户信息
 export const getUserByUsername = async (username: string): Promise<ApiResponse<User>> => {
-  const response = await axios.get(`${API_BASE_URL}/userInfo/username/${username}`);
+  const response = await axios.get(`${API_BASE_URL}/admin/userInfo/username/${username}`);
   return response.data;
 };
 
 // 获取用户列表
 export const getUserList = async (): Promise<ApiResponse<User[]>> => {
-  const response = await axios.get(`${API_BASE_URL}/userInfo/list`);
+  const response = await axios.get(`${API_BASE_URL}/admin/userInfo/list`);
   return response.data;
 };
 

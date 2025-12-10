@@ -115,7 +115,9 @@ export const searchProducts = async (keyword: string) => {
 };
 
 // 获取商品统计
-export const getProductStatistics = async () => {
-  const response = await axios.get(`${API_BASE_URL}/product/statistics`);
+export const getProductStatistics = async (merchantId?: string) => {
+  const response = await axios.get(`${API_BASE_URL}/product/statistics`, {
+    params: merchantId ? { merchantId } : {}
+  });
   return response.data;
 };

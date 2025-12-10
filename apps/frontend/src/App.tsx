@@ -4,6 +4,7 @@ import AdminDashboard from "./pages/Admin";
 import UserDashboard from "./pages/UserMobile/User";
 import UserHomeDetail from "./pages/UserMobile/UserHomeDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
+import MerchantDashboard from "./pages/merchant/index";
 import "./App.css";
 import OrderTrack from "./pages/UserMobile/orderTrack";
 function App() {
@@ -21,6 +22,13 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/merchant" 
+        element={
+          <ProtectedRoute>
+            <MerchantDashboard />
+          </ProtectedRoute>
+        } />
+        {/* 用户端 */}
         <Route
           path="/customer"
           element={

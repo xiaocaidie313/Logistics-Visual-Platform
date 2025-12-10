@@ -207,7 +207,8 @@ export class ProductController {
   // 商品统计
   async getProductStatistics(req: Request, res: Response): Promise<void> {
     try {
-      const result = await ProductService.getProductStatistics();
+      const { merchantId } = req.query;
+      const result = await ProductService.getProductStatistics(merchantId as string);
       sendResponse(res, 200, 'Success', result);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : '获取商品统计失败';

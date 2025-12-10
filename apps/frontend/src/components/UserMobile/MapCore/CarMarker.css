@@ -1,0 +1,35 @@
+/* CSS动画 - 让小车有轻微的上下浮动效果，模拟行驶中的颠簸感 */
+@keyframes carBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-1px) scale(1.02);
+  }
+  50% {
+    transform: translateY(0) scale(1);
+  }
+  75% {
+    transform: translateY(1px) scale(0.98);
+  }
+}
+
+/* CSS动画 - 平滑的过渡效果 */
+.car-marker-icon {
+  animation: carBounce 0.6s ease-in-out infinite;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+  will-change: transform;
+}
+
+/* 当小车移动时，增强动画效果 */
+.car-marker-icon.moving {
+  animation: carBounce 0.4s ease-in-out infinite;
+}
+
+/* 优化渲染性能 */
+.car-marker-icon {
+  backface-visibility: hidden;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+

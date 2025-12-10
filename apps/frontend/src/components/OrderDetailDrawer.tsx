@@ -1,13 +1,14 @@
+import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, Descriptions, Image, Tag, Space, Timeline, Divider, Tabs, Spin, Steps, Button } from 'antd';
 import { EnvironmentOutlined, CarOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { Order, OrderStatus } from '../services/orderService';
 import { getTrackByOrderId, type Track, type TrackNode } from '../services/trackService';
-import { useState, useEffect, useRef } from 'react';
 import dayjs from 'dayjs';
 import { io, Socket } from 'socket.io-client';
 import { useAMap } from '../hooks/useAMap';
 import PathLine from './MapCore/PathLine';
 import CarMarker from './MapCore/CarMarker';
+import PickupCodeDisplay from './UserMobile/PickupCodeDisplay';
 
 interface OrderDetailDrawerProps {
   open: boolean;
@@ -25,6 +26,7 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
   const trackIdRef = useRef<string | null>(null);
   const [currentPos, setCurrentPos] = useState<[number, number] | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [flatPath, setFlatPath] = useState<[number, number][]>([]);
   
   // 延迟初始化地图，等待DOM完全渲染
   useEffect(() => {
@@ -61,19 +63,63 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
           // 保存物流单号用于WebSocket过滤
           if (trackData?.logisticsNumber) {
             trackIdRef.current = trackData.logisticsNumber;
+            // 如果WebSocket已连接，加入物流房间
+            if (socketRef.current?.connected) {
+              socketRef.current.emit('join:track', trackData.logisticsNumber);
+              console.log('[订单详情] 加入物流房间:', trackData.logisticsNumber);
+            }
           }
           
           // 设置当前位置
-          if (trackData?.currentCoords && Array.isArray(trackData.currentCoords)) {
-            setCurrentPos(trackData.currentCoords as [number, number]);
+          if (trackData?.currentCoords && Array.isArray(trackData.currentCoords) && trackData.currentCoords.length >= 2) {
+            const lng = trackData.currentCoords[0];
+            const lat = trackData.currentCoords[1];
+            if (typeof lng === 'number' && typeof lat === 'number') {
+              setCurrentPos([lng, lat]);
+            }
+          }
+          
+          // 展平路径数据（处理嵌套数组）
+          if (trackData?.path && Array.isArray(trackData.path) && trackData.path.length > 0) {
+            const flattened: [number, number][] = [];
+            trackData.path.forEach((item: unknown) => {
+              if (Array.isArray(item)) {
+                if (item.length > 0 && Array.isArray(item[0])) {
+                  // 嵌套数组
+                  item.forEach((point: unknown) => {
+                    if (Array.isArray(point) && point.length >= 2) {
+                      const lng = point[0];
+                      const lat = point[1];
+                      if (typeof lng === 'number' && typeof lat === 'number') {
+                        flattened.push([lng, lat]);
+                      }
+                    }
+                  });
+                } else if (item.length >= 2) {
+                  // 单个点
+                  const lng = item[0];
+                  const lat = item[1];
+                  if (typeof lng === 'number' && typeof lat === 'number') {
+                    flattened.push([lng, lat]);
+                  }
+                }
+              }
+            });
+            setFlatPath(flattened);
+          } else {
+            setFlatPath([]);
           }
         }
       } else {
         setTrack(null);
+        trackIdRef.current = null;
+        setFlatPath([]);
+        setCurrentPos(null);
       }
     } catch (error) {
       console.error('获取物流信息失败:', error);
       setTrack(null);
+      trackIdRef.current = null;
     } finally {
       setTrackLoading(false);
     }
@@ -81,13 +127,17 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
 
   // 当切换到物流追踪标签页且有地图和路径数据时，自动适配视野
   useEffect(() => {
-    if (activeTab === '2' && map && AMap && track?.path && track.path.length > 0) {
+    if (activeTab === '2' && map && AMap && flatPath.length > 0) {
       setTimeout(() => {
-        const polyline = new AMap.Polyline({ path: track.path });
-        map.setFitView([polyline]);
+        try {
+          const polyline = new AMap.Polyline({ path: flatPath });
+          map.setFitView([polyline]);
+        } catch (error) {
+          console.error('适配地图视野失败:', error);
+        }
       }, 300);
     }
-  }, [activeTab, map, AMap, track]);
+  }, [activeTab, map, AMap, flatPath]);
 
   // 连接WebSocket
   const connectWebSocket = () => {
@@ -113,6 +163,15 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
       // 如果有物流单号，加入物流房间
       if (trackIdRef.current) {
         socket.emit('join:track', trackIdRef.current);
+        console.log('[订单详情] 加入物流房间:', trackIdRef.current);
+      } else {
+        // 如果还没有物流单号，延迟一下再尝试加入（给 loadTrackInfo 时间）
+        setTimeout(() => {
+          if (trackIdRef.current && socket.connected) {
+            socket.emit('join:track', trackIdRef.current);
+            console.log('[订单详情] 延迟加入物流房间:', trackIdRef.current);
+          }
+        }, 500);
       }
     });
 
@@ -150,7 +209,50 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
     }) => {
       if (data.trackingNumber === trackIdRef.current) {
         console.log('[订单详情] 物流信息更新:', data);
-        setTrack(data.logisticsData);
+        const logisticsData = data.logisticsData;
+        
+        // 更新 track 数据
+        setTrack(logisticsData);
+        
+        // 更新当前位置（如果物流数据中有新的位置）
+        if (logisticsData.currentCoords && 
+            Array.isArray(logisticsData.currentCoords) && 
+            logisticsData.currentCoords.length >= 2) {
+          const lng = logisticsData.currentCoords[0];
+          const lat = logisticsData.currentCoords[1];
+          if (typeof lng === 'number' && typeof lat === 'number') {
+            const newPos: [number, number] = [lng, lat];
+            console.log('[订单详情] 更新车辆位置:', newPos);
+            setCurrentPos(newPos);
+          }
+        }
+        
+        // 更新路径数据（展平处理）
+        if (logisticsData.path && Array.isArray(logisticsData.path) && logisticsData.path.length > 0) {
+          const flattened: [number, number][] = [];
+          logisticsData.path.forEach((item: unknown) => {
+            if (Array.isArray(item)) {
+              if (item.length > 0 && Array.isArray(item[0])) {
+                item.forEach((point: unknown) => {
+                  if (Array.isArray(point) && point.length >= 2) {
+                    const lng = point[0];
+                    const lat = point[1];
+                    if (typeof lng === 'number' && typeof lat === 'number') {
+                      flattened.push([lng, lat]);
+                    }
+                  }
+                });
+              } else if (item.length >= 2) {
+                const lng = item[0];
+                const lat = item[1];
+                if (typeof lng === 'number' && typeof lat === 'number') {
+                  flattened.push([lng, lat]);
+                }
+              }
+            }
+          });
+          setFlatPath(flattened);
+        }
       }
     });
 
@@ -164,7 +266,49 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
       if (data.trackingNumber === trackIdRef.current) {
         console.log('[订单详情] 物流状态变更:', data);
         if (data.logisticsData) {
-          setTrack(data.logisticsData);
+          const logisticsData = data.logisticsData;
+          setTrack(logisticsData);
+          
+          // 更新当前位置
+          if (logisticsData.currentCoords && 
+              Array.isArray(logisticsData.currentCoords) && 
+              logisticsData.currentCoords.length >= 2) {
+            const lng = logisticsData.currentCoords[0];
+            const lat = logisticsData.currentCoords[1];
+            if (typeof lng === 'number' && typeof lat === 'number') {
+              setCurrentPos([lng, lat]);
+            }
+          }
+          
+          // 更新路径数据（展平处理）
+          if (logisticsData.path && Array.isArray(logisticsData.path) && logisticsData.path.length > 0) {
+            const flattened: [number, number][] = [];
+            logisticsData.path.forEach((item: unknown) => {
+              if (Array.isArray(item)) {
+                if (item.length > 0 && Array.isArray(item[0])) {
+                  item.forEach((point: unknown) => {
+                    if (Array.isArray(point) && point.length >= 2) {
+                      const lng = point[0];
+                      const lat = point[1];
+                      if (typeof lng === 'number' && typeof lat === 'number') {
+                        flattened.push([lng, lat]);
+                      }
+                    }
+                  });
+                } else if (item.length >= 2) {
+                  const lng = item[0];
+                  const lat = item[1];
+                  if (typeof lng === 'number' && typeof lat === 'number') {
+                    flattened.push([lng, lat]);
+                  }
+                }
+              }
+            });
+            setFlatPath(flattened);
+          }
+        } else {
+          // 如果没有完整数据，重新加载
+          loadTrackInfo();
         }
       }
     });
@@ -201,6 +345,12 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
       loadTrackInfo();
       connectWebSocket();
       setActiveTab('1'); // 重置到第一个标签页
+    } else if (!open) {
+      // 关闭抽屉时清理数据
+      setTrack(null);
+      setCurrentPos(null);
+      setFlatPath([]);
+      trackIdRef.current = null;
     }
 
     // 清理函数：关闭抽屉时断开WebSocket
@@ -316,9 +466,14 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
       return [];
     }
 
-    return track.tracks.map((trackItem: TrackNode) => {
+    return track.tracks.map((trackItem: TrackNode, index: number) => {
       const date = new Date(trackItem.time);
       const timeStr = `${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+      
+      // 判断是否是最后一条且状态为已送达
+      const isLastDelivered = index === track.tracks!.length - 1 && 
+                              trackItem.status === 'delivered' && 
+                              track.pickupCode;
       
       return {
         title: trackItem.description || trackItem.location,
@@ -327,6 +482,24 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
             <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
               {timeStr} {trackItem.location || ''}
             </div>
+            {/* 如果是最后一条已送达记录且有取件码，显示取件码 */}
+            {isLastDelivered && (
+              <div style={{ marginTop: 8, padding: '8px 12px', backgroundColor: '#f0f9ff', borderRadius: '4px', border: '1px solid #91d5ff' }}>
+                <div style={{ fontSize: 14, fontWeight: 'bold', color: '#1890ff', marginBottom: 4 }}>
+                  取件码：{track.pickupCode}
+                </div>
+                {track.pickupLocation && (
+                  <div style={{ fontSize: 12, color: '#666' }}>
+                    自提点：{track.pickupLocation}
+                  </div>
+                )}
+                {track.pickupCodeExpiresAt && (
+                  <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                    有效期至：{new Date(track.pickupCodeExpiresAt).toLocaleString('zh-CN')}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ),
         status: 'finish',
@@ -465,12 +638,12 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
                       />
                       
                       {/* 地图渲染路线和标记 */}
-                      {map && AMap && track.path && track.path.length > 0 && (
+                      {map && AMap && flatPath.length > 0 && (
                         <>
                           <PathLine
                             map={map}
                             AMap={AMap}
-                            path={track.path as [number, number][]}
+                            path={flatPath}
                             currentPosition={currentPos}
                           />
                           {currentPos && (
@@ -540,6 +713,14 @@ const OrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({ open, order, onCl
                           {track.logisticsStatus === 'delivered' ? '已送达' : '运输中'}
                         </Tag>
                       </div>
+
+                      {/* 取件码显示 */}
+                      <PickupCodeDisplay
+                        pickupCode={track.pickupCode}
+                        pickupLocation={track.pickupLocation}
+                        expiresAt={track.pickupCodeExpiresAt}
+                        logisticsStatus={track.logisticsStatus}
+                      />
 
                       {/* 发货/收货地址 */}
                       <div style={{ marginTop: '16px' }}>

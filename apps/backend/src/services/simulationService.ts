@@ -3,6 +3,7 @@ import TrackInfo from '../models/track.js';
 import Order from '../models/order.js';
 import { emitLogisticsUpdate, emitOrderStatusChange } from './websocket.js';
 import { solveTSP, getDrivingRoute, generateLine } from '../utils/geoService.js';
+import { generateUniquePickupCode } from '../utils/pickupCodeGenerator.js';
 
 // 保存所有正在运行的模拟任务
 const activeSimulations = new Map<string, NodeJS.Timeout>();
@@ -14,16 +15,29 @@ const dispatchingHubs = new Set<string>();
  * 当物流状态变为 delivered 时，自动更新对应的订单状态
  */
 const syncOrderStatusToDelivered = async (orderId: string) => {
-  if (!orderId) return;
+  if (!orderId) {
+    console.warn('[订单状态同步] orderId 为空，跳过同步');
+    return;
+  }
   
   try {
+    console.log(`[订单状态同步] 开始同步订单状态，orderId: ${orderId}`);
     const order = await Order.findOne({ orderId });
-    if (order && order.status !== 'delivered') {
+    if (!order) {
+      console.warn(`[订单状态同步] 未找到订单，orderId: ${orderId}`);
+      return;
+    }
+    
+    console.log(`[订单状态同步] 找到订单，当前状态: ${order.status}, orderId: ${order.orderId}`);
+    
+    if (order.status !== 'delivered') {
       order.status = 'delivered';
       order.deliveryTime = new Date();
       await order.save();
       emitOrderStatusChange(order.orderId, 'delivered', order);
       console.log(`[订单状态同步] 订单 ${order.orderId} 状态已更新为 delivered`);
+    } else {
+      console.log(`[订单状态同步] 订单 ${order.orderId} 状态已经是 delivered，跳过更新`);
     }
   } catch (error) {
     console.error(`[订单状态同步失败] 订单 ${orderId}:`, error);
@@ -84,7 +98,7 @@ export const startSimulation = (track: any) => {
 
   console.log(`[模拟] ${track.id} (${track.isSameCity ? '同城' : '跨城'}) | 状态: ${track.logisticsStatus} | 进度: ${index}/${totalSteps}`);
 
-  // 步骤 2: 创建定时器，每 1 秒执行一次
+  // 步骤 2: 创建定时器，每 0.5 秒执行一次（方案5：优化更新频率，让移动更流畅）
   const timer = setInterval(async () => {
     // 步骤 2.1: 检查是否到达终点
     if (index >= totalSteps) {
@@ -129,18 +143,74 @@ export const startSimulation = (track: any) => {
         const hubName = track.districtHub || "区域站点";
         const fullHubName = hubName.includes('区') ? hubName + "人民政府" : hubName;
 
+        // 生成取件码（如果还没有）
+        let pickupCode = track.pickupCode;
+        let expiresAt: Date | null = null;
+        
+        if (!pickupCode) {
+          try {
+            pickupCode = await generateUniquePickupCode(async (code) => {
+              const exists = await TrackInfo.findOne({ pickupCode: code });
+              return !!exists;
+            });
+            
+            // 设置过期时间（7天后）
+            expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+            
+            console.log(`[取件码生成] 订单 ${track.orderId} 生成取件码: ${pickupCode}`);
+            
+            // 同步更新订单的取件码
+            if (track.orderId) {
+              await Order.findOneAndUpdate(
+                { orderId: track.orderId },
+                { 
+                  pickupCode: pickupCode,
+                  pickupCodeGeneratedAt: now,
+                  pickupCodeExpiresAt: expiresAt
+                }
+              );
+            }
+          } catch (error) {
+            console.error(`[取件码生成失败] 订单 ${track.orderId}:`, error);
+            // 即使生成失败，也继续后续流程
+          }
+        } else {
+          // 如果已有取件码，使用现有的过期时间
+          expiresAt = track.pickupCodeExpiresAt ? new Date(track.pickupCodeExpiresAt) : null;
+        }
+
         const log = {
           time: now,
           location: fullHubName,
-          description: `快件已到达【${fullHubName}】集散点，等待集货派送`,
+          description: pickupCode 
+            ? `快件已到达【${fullHubName}】集散点，取件码：${pickupCode}，等待集货派送`
+            : `快件已到达【${fullHubName}】集散点，等待集货派送`,
           status: 'waiting_for_delivery',
           operator: '站点管理员'
         };
 
+        const updateData: any = {
+          logisticsStatus: 'waiting_for_delivery',
+          hubArrivalTime: now,
+          currentCoords: finalPoint
+        };
+
+        // 如果有取件码，添加到更新数据中
+        if (pickupCode) {
+          updateData.pickupCode = pickupCode;
+          updateData.pickupLocation = fullHubName;
+          // 只有新生成的取件码才设置生成时间和过期时间
+          if (expiresAt && !track.pickupCode) {
+            updateData.pickupCodeGeneratedAt = now;
+            updateData.pickupCodeExpiresAt = expiresAt;
+          }
+        }
+
         const updatedTrack = await TrackInfo.findByIdAndUpdate(
           track._id,
           {
-            $set: { logisticsStatus: 'waiting_for_delivery', hubArrivalTime: now, currentCoords: finalPoint },
+            $set: updateData,
             $push: { tracks: log }
           },
           { new: true }
@@ -221,7 +291,7 @@ export const startSimulation = (track: any) => {
       emitLogisticsUpdate(currentTrack.logisticsNumber, trackDataToSend);
     }
     index++;
-  }, 1000); // 每 1 秒执行一次
+  }, 1000); // 每 0.5 秒执行一次（方案5：优化更新频率）
 
   // 步骤 3: 保存定时器引用，方便后续停止
   activeSimulations.set(track.id, timer);
@@ -230,7 +300,7 @@ export const startSimulation = (track: any) => {
 /**
  * 步骤 4: 停止模拟
  * 
- * @param trackId - 物流追踪 ID
+ * @param trackId - 物流追踪 ID 
  */
 export const stopSimulation = (trackId: string) => {
   const timer = activeSimulations.get(trackId);

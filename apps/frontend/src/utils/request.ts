@@ -33,6 +33,12 @@ request.interceptors.response.use(
     return response;
   },
   (error) => {
+    // 处理网络错误或连接失败的情况
+    if (!error.response) {
+      console.error("网络错误:", error.message);
+      return Promise.reject("网络连接失败，请检查后端服务是否启动");
+    }
+    
     const { status, data } = error.response;
     console.log(error);
     if (status === 401) {

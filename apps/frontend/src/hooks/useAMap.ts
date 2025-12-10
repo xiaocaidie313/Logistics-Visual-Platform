@@ -32,16 +32,34 @@ export const useAMap = (containerId: string) => {
         })
             .then((AMap) => {
                 setAMapInstance(AMap);
-                const mapInstance = new AMap.Map(containerId, {
-                    zoom: 11,
-                    center: [116.397428, 39.90923],
-                    viewMode: '3D',
-                    pitch: 20,
-                });
-                mapInstance.addControl(new AMap.Scale());
-                mapInstance.addControl(new AMap.ToolBar());
-                setMap(mapInstance);
-                mapInstanceRef.current = mapInstance;
+                
+                // 等待一小段时间确保 DOM 完全渲染
+                setTimeout(() => {
+                    try {
+                        const mapInstance = new AMap.Map(containerId, {
+                            zoom: 11,
+                            center: [116.397428, 39.90923],
+                            viewMode: '3D',
+                            pitch: 20,
+                        });
+                        
+                        // 等待地图完全加载
+                        mapInstance.on('complete', () => {
+                            console.log('地图加载完成');
+                            try {
+                                mapInstance.addControl(new AMap.Scale());
+                                mapInstance.addControl(new AMap.ToolBar());
+                            } catch (error) {
+                                console.warn('添加地图控件失败:', error);
+                            }
+                        });
+                        
+                        setMap(mapInstance);
+                        mapInstanceRef.current = mapInstance;
+                    } catch (error) {
+                        console.error('创建地图实例失败:', error);
+                    }
+                }, 100);
             })
             .catch((e) => console.error('地图加载失败:', e));
 

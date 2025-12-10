@@ -133,14 +133,10 @@ const UserHomeDetailItem = ({ data }: UserHomeDetailItemProps) => {
         // 步骤12: 处理响应结果
         if (response.code === 200) {  
           const savedOrder = response.data;
-          try {
-            // 创建物流订单
-              await genTrackorder(savedOrder, orderData);
-          } catch (error) {
-            console.error("创建物流订单失败:", error);
-          }
+          // 注意：不再自动创建物流订单，等待商家发货时创建
+          // 订单状态为 paid（已支付），等待商家发货
           
-          // message.success("购买成功");
+          message.success("订单创建成功，等待商家发货");
           setTimeout(() => {
             console.log("购买成功", response.data);
             setIsModalOpen(false);

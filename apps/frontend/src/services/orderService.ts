@@ -98,6 +98,18 @@ export const getOrderList = async (): Promise<ApiResponse<Order[]>> => {
   return response.data;
 };
 
+// 根据用户ID获取订单
+export const getOrdersByUserId = async (userId: string): Promise<ApiResponse<Order[]>> => {
+  const response = await axios.get(`${API_BASE_URL}/order/user/${userId}`);
+  return response.data;
+};
+
+// 根据商家ID获取订单
+export const getOrdersByMerchantId = async (merchantId: string): Promise<ApiResponse<Order[]>> => {
+  const response = await axios.get(`${API_BASE_URL}/order/merchant/${merchantId}`);
+  return response.data;
+};
+
 // 切换订单状态
 export const updateOrderStatus = async (id: string, status: OrderStatus): Promise<ApiResponse<Order>> => {
   const response = await axios.put(`${API_BASE_URL}/order/switch/status/${id}`, { status });

@@ -3,8 +3,9 @@ import { ApiResponse, Order } from '../orderService';
 const API_BASE_URL = 'http://localhost:3002/api';
 
 // 首页推荐商品
-export const getHomeData = async () => {
-    const response = await axios.get(`${API_BASE_URL}/admin/product/list`);
+export const getHomeData = async (page=1, limit=10) => {
+    const response = await axios.get(`${API_BASE_URL}/admin/product/list`,
+        {params:{page, limit}});
     return response.data;
 }
 

@@ -161,8 +161,14 @@ export class ProductService {
   }
 
   // 商品统计
-  async getProductStatistics(): Promise<any> {
+  async getProductStatistics(merchantId?: string): Promise<any> {
+    const matchStage: any = {};
+    if (merchantId) {
+      matchStage.merchantId = new mongoose.Types.ObjectId(merchantId);
+    }
+
     const statistics = await Product.aggregate([
+      ...(Object.keys(matchStage).length > 0 ? [{ $match: matchStage }] : []),
       {
         $group: {
           _id: '$status',
@@ -173,6 +179,7 @@ export class ProductService {
     ]);
 
     const categoryStats = await Product.aggregate([
+      ...(Object.keys(matchStage).length > 0 ? [{ $match: matchStage }] : []),
       {
         $group: {
           _id: '$category',
@@ -181,8 +188,9 @@ export class ProductService {
       }
     ]);
 
+    const countQuery = merchantId ? { merchantId } : {};
     const result = {
-      total: await Product.countDocuments(),
+      total: await Product.countDocuments(countQuery),
       byStatus: statistics,
       byCategory: categoryStats
     };

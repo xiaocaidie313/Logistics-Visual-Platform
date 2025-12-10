@@ -136,6 +136,27 @@ const trackSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    // 取件码
+    pickupCode: {
+        type: String,
+        required: false,
+        index: true, // 用于快速查询
+    },
+    // 取件码生成时间
+    pickupCodeGeneratedAt: {
+        type: Date,
+        required: false,
+    },
+    // 取件码过期时间
+    pickupCodeExpiresAt: {
+        type: Date,
+        required: false,
+    },
+    // 自提点位置
+    pickupLocation: {
+        type: String,
+        required: false,
+    },
 })
 
 const TrackInfo = mongoose.model('Track', trackSchema);

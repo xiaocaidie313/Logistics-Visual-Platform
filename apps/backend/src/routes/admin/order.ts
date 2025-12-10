@@ -34,6 +34,9 @@ router.get('/order/sort/totalprice/:order', auth, OrderController.getOrdersSorte
 // 根据用户ID获取订单
 router.get('/order/user/:userId', auth, OrderController.getOrdersByUserId.bind(OrderController));
 
+// 根据商家ID获取订单
+router.get('/order/merchant/:merchantId', auth, OrderController.getOrdersByMerchantId.bind(OrderController));
+
 // 订单统计
 router.get('/order/statistics', auth, OrderController.getOrderStatistics.bind(OrderController));
 

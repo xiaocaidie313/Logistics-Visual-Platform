@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import type { Product } from '../services/productService';
+import React, { useState, useEffect, useCallback } from "react";
+import type { Product } from "../../services/productService";
 import {
   getProductList,
   createProduct,
@@ -8,99 +8,116 @@ import {
   updateProductStatus,
   searchProducts,
   getProductStatistics,
-} from '../services/productService';
-import { getUserList, User } from '../services/userService';
-import ProductFormModal from '../components/ProductFormModal';
+} from "../../services/productService";
+import type { User } from "../../services/userService";
+import ProductFormModal from "../../components/ProductFormModal";
 
 const ProductManagement: React.FC = () => {
+  const [merchantId, setMerchantId] = useState<string>("");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterMerchant, setFilterMerchant] = useState('');
-  const [sortField, setSortField] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  // 移除filterMerchant，因为商家端只能查看自己的商品
+  const [sortField, setSortField] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 5, 
+    limit: 5,
     total: 0,
-    totalPages: 0
+    totalPages: 0,
   });
   const [statistics, setStatistics] = useState<any>(null);
-  const [merchants, setMerchants] = useState<User[]>([]); // 存储商家列表
-  const [merchantMap, setMerchantMap] = useState<Record<string, string>>({});
+  // 移除merchants相关代码，商家端不需要显示商家列表
 
+  // 从 localStorage 获取 merchantId
   useEffect(() => {
-    fetchMerchants();
+    const user = localStorage.getItem("userInfo");
+    if (user) {
+      const userInfo = JSON.parse(user) as User;
+      if (userInfo._id) {
+        setMerchantId(userInfo._id);
+      }
+    }
   }, []);
 
-  useEffect(() => {
-    fetchProducts();
-    fetchStatistics();
-  }, [pagination.page, filterCategory, filterStatus, filterMerchant, sortField, sortOrder]);
-
-  const fetchMerchants = async () => {
-    try {
-      const response = await getUserList();
-      if (response.code === 200) {
-        const merchantList = response.data.filter(user => user.role === 'merchant');
-        setMerchants(merchantList);
-        
-        const map: Record<string, string> = {};
-        merchantList.forEach(m => {
-          if (m._id) map[m._id] = m.username;
-        });
-        setMerchantMap(map);
-      }
-    } catch (error) {
-      console.error('获取商家列表失败:', error);
+  const fetchProducts = useCallback(async () => {
+    // 如果merchantId不存在，不发送请求
+    if (!merchantId) {
+      console.warn('merchantId 不存在，跳过获取商品列表');
+      return;
     }
-  };
 
-  const fetchProducts = async () => {
     setLoading(true);
     try {
       const params: any = {
         page: pagination.page,
         limit: pagination.limit,
         sortBy: sortField,
-        sortOrder: sortOrder
+        sortOrder: sortOrder,
+        merchantId: merchantId, // 默认传递当前商家的merchantId
       };
 
       if (filterCategory) params.category = filterCategory;
       if (filterStatus) params.status = filterStatus;
-      if (filterMerchant) params.merchantId = filterMerchant;
+      // 移除filterMerchant，因为商家端只能查看自己的商品
 
       const response = await getProductList(params);
       if (response.code === 200) {
-        console.log('获取商品列表成功:', response.data);
-        setProducts(response.data.products);
+        console.log("获取商品列表成功:", response.data);
+        // 额外过滤确保只显示当前商家的商品
+        const filteredProducts = response.data.products.filter((product: Product) => {
+          const productMerchantId = typeof product.merchantId === 'string' 
+            ? product.merchantId 
+            : (product.merchantId as any)?._id || (product.merchantId as any)?.toString();
+          return productMerchantId === merchantId || productMerchantId?.toString() === merchantId;
+        });
+        setProducts(filteredProducts);
         setPagination(response.data.pagination);
       }
     } catch (error) {
-      console.error('获取商品列表失败:', error);
-      alert('获取商品列表失败');
+      console.error("获取商品列表失败:", error);
+      alert("获取商品列表失败");
     } finally {
       setLoading(false);
     }
-  };
+  }, [merchantId, pagination.page, pagination.limit, sortField, sortOrder, filterCategory, filterStatus]);
 
-  const fetchStatistics = async () => {
+  const fetchStatistics = useCallback(async () => {
+    // 如果merchantId不存在，不发送请求
+    if (!merchantId) {
+      console.warn('merchantId 不存在，跳过获取统计数据');
+      return;
+    }
+
     try {
-      const response = await getProductStatistics();
+      const response = await getProductStatistics(merchantId);
       if (response.code === 200 && response.data) {
         setStatistics(response.data);
       } else {
-        console.warn('获取统计数据失败，响应:', response);
-        setStatistics({ totalProducts: 0, activeProducts: 0, inactiveProducts: 0, outOfStockProducts: 0 });
+        console.warn("获取统计数据失败，响应:", response);
+        setStatistics({
+          totalProducts: 0,
+          activeProducts: 0,
+          inactiveProducts: 0,
+          outOfStockProducts: 0,
+        });
       }
     } catch (error) {
-      console.error('获取统计数据失败:', error);
+      console.error("获取统计数据失败:", error);
     }
-  };
+  }, [merchantId]);
+
+  useEffect(() => {
+    // 只有当merchantId存在时才获取数据
+    if (merchantId) {
+      fetchProducts();
+      fetchStatistics();
+    }
+  }, [merchantId, fetchProducts, fetchStatistics]);
 
   const handleSearch = async () => {
     if (!searchKeyword.trim()) {
@@ -112,11 +129,18 @@ const ProductManagement: React.FC = () => {
     try {
       const response = await searchProducts(searchKeyword);
       if (response.code === 200) {
-        setProducts(response.data);
+        // 过滤出当前商家的商品
+        const filteredProducts = response.data.filter((product: Product) => {
+          const productMerchantId = typeof product.merchantId === 'string' 
+            ? product.merchantId 
+            : (product.merchantId as any)?._id || (product.merchantId as any)?.toString();
+          return productMerchantId === merchantId || productMerchantId?.toString() === merchantId;
+        });
+        setProducts(filteredProducts);
       }
     } catch (error) {
-      console.error('搜索失败:', error);
-      alert('搜索失败');
+      console.error("搜索失败:", error);
+      alert("搜索失败");
     } finally {
       setLoading(false);
     }
@@ -126,14 +150,14 @@ const ProductManagement: React.FC = () => {
     try {
       const response = await createProduct(productData);
       if (response.code === 200) {
-        alert('创建商品成功');
+        alert("创建商品成功");
         setModalVisible(false);
         fetchProducts();
         fetchStatistics();
       }
     } catch (error) {
-      console.error('创建商品失败:', error);
-      alert('创建商品失败');
+      console.error("创建商品失败:", error);
+      alert("创建商品失败");
     }
   };
 
@@ -143,30 +167,31 @@ const ProductManagement: React.FC = () => {
     try {
       const response = await updateProduct(currentProduct._id, productData);
       if (response.code === 200) {
-        alert('更新商品成功');
+        alert("更新商品成功");
         setModalVisible(false);
         setCurrentProduct(null);
-        fetchProducts();
-      }
-    } catch (error) {
-      console.error('更新商品失败:', error);
-      alert('更新商品失败');
-    }
-  };
-
-  const handleDeleteProduct = async (id: string) => {
-    if (!window.confirm('确认删除此商品吗？')) return;
-
-    try {
-      const response = await deleteProduct(id);
-      if (response.code === 200) {
-        alert('删除商品成功');
         fetchProducts();
         fetchStatistics();
       }
     } catch (error) {
-      console.error('删除商品失败:', error);
-      alert('删除商品失败');
+      console.error("更新商品失败:", error);
+      alert("更新商品失败");
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm("确认删除此商品吗？")) return;
+
+    try {
+      const response = await deleteProduct(id);
+      if (response.code === 200) {
+        alert("删除商品成功");
+        fetchProducts();
+        fetchStatistics();
+      }
+    } catch (error) {
+      console.error("删除商品失败:", error);
+      alert("删除商品失败");
     }
   };
 
@@ -174,12 +199,13 @@ const ProductManagement: React.FC = () => {
     try {
       const response = await updateProductStatus(id, status);
       if (response.code === 200) {
-        alert('状态更新成功');
+        alert("状态更新成功");
         fetchProducts();
+        fetchStatistics();
       }
     } catch (error) {
-      console.error('更新状态失败:', error);
-      alert('更新状态失败');
+      console.error("更新状态失败:", error);
+      alert("更新状态失败");
     }
   };
 
@@ -195,34 +221,39 @@ const ProductManagement: React.FC = () => {
 
   const getStatusText = (status: string) => {
     const statusMap: Record<string, string> = {
-      active: '在售',
-      inactive: '下架',
-      out_of_stock: '缺货'
+      active: "在售",
+      inactive: "下架",
+      out_of_stock: "缺货",
     };
     return statusMap[status] || status;
   };
 
   const getStatusColor = (status: string) => {
     const colorMap: Record<string, string> = {
-      active: '#4CAF50',
-      inactive: '#FF9800',
-      out_of_stock: '#F44336'
+      active: "#4CAF50",
+      inactive: "#FF9800",
+      out_of_stock: "#F44336",
     };
-    return colorMap[status] || '#999';
+    return colorMap[status] || "#999";
   };
 
   const handleSort = (field: string) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortOrder('desc');
+      setSortOrder("desc");
     }
   };
 
   const renderSortIcon = (field: string) => {
-    if (sortField !== field) return <span style={{ color: '#ccc', marginLeft: 4 }}>↕</span>;
-    return <span style={{ color: '#1976D2', marginLeft: 4 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>;
+    if (sortField !== field)
+      return <span style={{ color: "#ccc", marginLeft: 4 }}>↕</span>;
+    return (
+      <span style={{ color: "#1976D2", marginLeft: 4 }}>
+        {sortOrder === "asc" ? "↑" : "↓"}
+      </span>
+    );
   };
 
   return (
@@ -255,27 +286,13 @@ const ProductManagement: React.FC = () => {
             placeholder="搜索商品名称、ID..."
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyPress={(e) => e.key === "Enter" && handleSearch()}
           />
           <button onClick={handleSearch}>搜索</button>
         </div>
 
         <div className="filters">
-          <select
-            value={filterMerchant}
-            onChange={(e) => {
-              console.log('商家选择改变:', e.target.value); // 调试：确认 onChange 被触发
-              setFilterMerchant(e.target.value);
-            }}
-          >
-            <option value="">所有商家</option>
-            {merchants.map(merchant => (
-              <option key={merchant._id} value={merchant._id}>
-                {merchant.username}
-              </option>
-            ))}
-          </select>
-
+          {/* 移除商家筛选，因为商家端只能查看自己的商品 */}
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
@@ -313,21 +330,21 @@ const ProductManagement: React.FC = () => {
               <thead>
                 <tr>
                   <th>商品名称</th>
-                  <th>商家</th>
+                  {/* 移除商家列 */}
                   <th>分类</th>
                   <th>SKU数量</th>
                   <th>状态</th>
-                  <th 
-                    onClick={() => handleSort('salesCount')} 
-                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  <th
+                    onClick={() => handleSort("salesCount")}
+                    style={{ cursor: "pointer", userSelect: "none" }}
                   >
-                    销量 {renderSortIcon('salesCount')}
+                    销量 {renderSortIcon("salesCount")}
                   </th>
-                  <th 
-                    onClick={() => handleSort('createdAt')} 
-                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  <th
+                    onClick={() => handleSort("createdAt")}
+                    style={{ cursor: "pointer", userSelect: "none" }}
                   >
-                    创建时间 {renderSortIcon('createdAt')}
+                    创建时间 {renderSortIcon("createdAt")}
                   </th>
                   <th>操作</th>
                 </tr>
@@ -343,17 +360,15 @@ const ProductManagement: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td>
-                      {product.merchantId && merchantMap[product.merchantId] 
-                        ? merchantMap[product.merchantId] 
-                        : (product.merchantId || '-')}
-                    </td>
+                    {/* 移除商家列，商家端只显示自己的商品 */}
                     <td>{product.category}</td>
                     <td>{product.skus.length}</td>
                     <td>
                       <span
                         className="status-badge"
-                        style={{ backgroundColor: getStatusColor(product.status) }}
+                        style={{
+                          backgroundColor: getStatusColor(product.status),
+                        }}
                       >
                         {getStatusText(product.status)}
                       </span>
@@ -362,7 +377,7 @@ const ProductManagement: React.FC = () => {
                     <td>
                       {product.createdAt
                         ? new Date(product.createdAt).toLocaleDateString()
-                        : '-'}
+                        : "-"}
                     </td>
                     <td>
                       <div className="action-buttons">
@@ -401,16 +416,21 @@ const ProductManagement: React.FC = () => {
           <div className="pagination">
             <button
               disabled={pagination.page === 1}
-              onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+              onClick={() =>
+                setPagination({ ...pagination, page: pagination.page - 1 })
+              }
             >
               上一页
             </button>
             <span>
-              第 {pagination.page} / {pagination.totalPages} 页，共 {pagination.total} 条
+              第 {pagination.page} / {pagination.totalPages} 页，共{" "}
+              {pagination.total} 条
             </span>
             <button
               disabled={pagination.page === pagination.totalPages}
-              onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+              onClick={() =>
+                setPagination({ ...pagination, page: pagination.page + 1 })
+              }
             >
               下一页
             </button>
@@ -422,7 +442,8 @@ const ProductManagement: React.FC = () => {
       <ProductFormModal
         visible={modalVisible}
         product={currentProduct}
-        merchants={merchants}
+        merchants={[]} // 商家端不需要选择商家
+        merchantId={merchantId} // 自动设置当前商家的merchantId
         onClose={() => {
           setModalVisible(false);
           setCurrentProduct(null);

@@ -215,6 +215,22 @@ const orderSchema = new mongoose.Schema(
     refundReason: {
       type: String,
     },
+    // 取件码
+    pickupCode: {
+      type: String,
+      required: false,
+      index: true, // 用于快速查询
+    },
+    // 取件码生成时间
+    pickupCodeGeneratedAt: {
+      type: Date,
+      required: false,
+    },
+    // 取件码过期时间
+    pickupCodeExpiresAt: {
+      type: Date,
+      required: false,
+    },
   },
   {
     timestamps: true, // 自动生成 createdAt 和 updatedAt

@@ -88,12 +88,16 @@ export enum SocketEvents {
 // 推送订单状态更新
 export const emitOrderStatusChange = (orderId: string, status: string, orderData?: unknown) => {
   const socketIO = getIO();
-  socketIO.to(`order:${orderId}`).emit(SocketEvents.ORDER_STATUS_CHANGED, {
+  const eventData = {
     orderId,
     status,
     orderData,
     timestamp: new Date()
-  });
+  };
+  // 发送到特定订单房间
+  socketIO.to(`order:${orderId}`).emit(SocketEvents.ORDER_STATUS_CHANGED, eventData);
+  // 同时进行全局广播，确保所有客户端都能收到
+  socketIO.emit(SocketEvents.ORDER_STATUS_CHANGED, eventData);
 };
 
 // 推送订单更新

@@ -184,6 +184,22 @@ export class OrderController {
     }
   }
 
+  // 根据商家ID获取订单
+  async getOrdersByMerchantId(req: Request, res: Response): Promise<void> {
+    try {
+      const { merchantId } = req.params;
+      if (!merchantId) {
+        sendResponse(res, 400, '商家ID不能为空', {});
+        return;
+      }
+      const orders = await OrderService.getOrdersByMerchantId(merchantId);
+      sendResponse(res, 200, 'Success', orders);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '获取商家订单失败';
+      sendResponse(res, 400, errorMessage, {});
+    }
+  }
+
   // 订单统计
   async getOrderStatistics(req: Request, res: Response): Promise<void> {
     try {

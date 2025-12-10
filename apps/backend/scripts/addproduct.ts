@@ -10,23 +10,24 @@ const addProduct = async () => {
         console.log('=====数据库连接成功=====');
 
         const newProduct = new Product({
-            productName: '弱水时砂琉璃Ultra',
-            category: '蓝牙耳机',
-            description: '弱水时砂琉璃Ultra降噪入耳式降噪蓝牙耳机2025新款耳机琉璃x升级',
-            images: 'http://47.109.143.184/img/弱水时砂琉璃Ultra.png',
+            productName: 'mikasaV300w',
+            category: '体育用品',
+            description: 'mikasa米卡萨排球v300w官方旗舰店正品v200w中考学生训练比赛专用',
+            images: 'http://47.109.143.184/img/mikasav300.png',
             skus: [
                 {
-                    skuName: '弱水时砂琉璃Ultra-标准装',
-                    price: 249,
-                    stock: 100,
+                    skuName: 'V330W【礼物版】赠-送礼手提袋',
+                    price: 254
+                    ,                    
+                    stock: 10000,
                     attributes: {
-                        color: '浅云白',
+                        color: '',
                         // size: 'S',
                     },
                 }
             ],
             status: 'active',
-            salesCount: 1200,
+            salesCount: 10200,
             merchantId: new mongoose.Types.ObjectId(merchantId),
             createdAt: new Date(),
             updatedAt: new Date(),
