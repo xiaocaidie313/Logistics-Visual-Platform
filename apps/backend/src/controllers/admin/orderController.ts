@@ -203,10 +203,38 @@ export class OrderController {
   // 订单统计
   async getOrderStatistics(req: Request, res: Response): Promise<void> {
     try {
-      const result = await OrderService.getOrderStatistics();
+      const { merchantId } = req.query;
+      const result = await OrderService.getOrderStatistics(merchantId as string);
       sendResponse(res, 200, 'Success', result);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : '获取订单统计失败';
+      sendResponse(res, 400, errorMessage, {});
+    }
+  }
+
+  // 订单时间趋势统计
+  async getOrderTrendStatistics(req: Request, res: Response): Promise<void> {
+    try {
+      const { merchantId, period } = req.query;
+      const result = await OrderService.getOrderTrendStatistics(
+        merchantId as string,
+        (period as 'day' | 'week' | 'month') || 'day'
+      );
+      sendResponse(res, 200, 'Success', result);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '获取订单趋势统计失败';
+      sendResponse(res, 400, errorMessage, {});
+    }
+  }
+
+  // 订单时段分析
+  async getOrderHourStatistics(req: Request, res: Response): Promise<void> {
+    try {
+      const { merchantId } = req.query;
+      const result = await OrderService.getOrderHourStatistics(merchantId as string);
+      sendResponse(res, 200, 'Success', result);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '获取订单时段统计失败';
       sendResponse(res, 400, errorMessage, {});
     }
   }

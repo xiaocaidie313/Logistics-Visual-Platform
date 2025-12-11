@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Order from "../../models/order.js";
 import {
   emitOrderCreated,
@@ -123,8 +124,14 @@ export class OrderService {
   }
 
   // 订单统计
-  async getOrderStatistics(): Promise<any> {
+  async getOrderStatistics(merchantId?: string): Promise<any> {
+    const matchStage: any = {};
+    if (merchantId) {
+      matchStage.merchantId = new mongoose.Types.ObjectId(merchantId);
+    }
+
     const statistics = await Order.aggregate([
+      ...(Object.keys(matchStage).length > 0 ? [{ $match: matchStage }] : []),
       {
         $group: {
           _id: '$status',
@@ -134,12 +141,106 @@ export class OrderService {
       },
     ]);
     
+    const countQuery = merchantId ? { merchantId } : {};
     const result = {
-      total: await Order.countDocuments(),
+      total: await Order.countDocuments(countQuery),
       byStatus: statistics,
     };
     
     return result;
+  }
+
+  // 订单时间趋势统计（按日/周/月）
+  async getOrderTrendStatistics(merchantId?: string, period: 'day' | 'week' | 'month' = 'day'): Promise<any> {
+    const matchStage: any = {
+      ordertime: { $exists: true, $ne: null }
+    };
+    if (merchantId) {
+      matchStage.merchantId = new mongoose.Types.ObjectId(merchantId);
+    }
+
+    // 根据周期确定日期格式
+    let dateFormatStr: string;
+    switch (period) {
+      case 'day':
+        dateFormatStr = '%Y-%m-%d';
+        break;
+      case 'week':
+        dateFormatStr = '%Y-W%V';
+        break;
+      case 'month':
+        dateFormatStr = '%Y-%m';
+        break;
+      default:
+        dateFormatStr = '%Y-%m-%d';
+    }
+
+    const trendStats = await Order.aggregate([
+      { $match: matchStage },
+      {
+        $addFields: {
+          ordertimeDate: { $toDate: '$ordertime' }
+        }
+      },
+      {
+        $match: {
+          ordertimeDate: { $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { 
+              format: dateFormatStr,
+              date: '$ordertimeDate'
+            }
+          },
+          count: { $sum: 1 },
+          totalAmount: { $sum: '$totalAmount' },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    return trendStats;
+  }
+
+  // 订单时段分析（按小时统计）
+  async getOrderHourStatistics(merchantId?: string): Promise<any> {
+    const matchStage: any = {
+      ordertime: { $exists: true, $ne: null }
+    };
+    if (merchantId) {
+      matchStage.merchantId = new mongoose.Types.ObjectId(merchantId);
+    }
+
+    const hourStats = await Order.aggregate([
+      { $match: matchStage },
+      {
+        $addFields: {
+          ordertimeDate: { $toDate: '$ordertime' }
+        }
+      },
+      {
+        $match: {
+          ordertimeDate: { $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: { $hour: '$ordertimeDate' },
+          count: { $sum: 1 },
+          totalAmount: { $sum: '$totalAmount' },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    return hourStats;
   }
 }
 

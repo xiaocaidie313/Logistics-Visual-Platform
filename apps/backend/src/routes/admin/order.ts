@@ -40,4 +40,11 @@ router.get('/order/merchant/:merchantId', auth, OrderController.getOrdersByMerch
 // 订单统计
 router.get('/order/statistics', auth, OrderController.getOrderStatistics.bind(OrderController));
 
+// 订单时间趋势统计
+router.get('/order/trend', auth, OrderController.getOrderTrendStatistics.bind(OrderController));
+
+// 订单时段分析
+router.get('/order/hour-statistics', auth, OrderController.getOrderHourStatistics.bind(OrderController));
+
+
 export default router;

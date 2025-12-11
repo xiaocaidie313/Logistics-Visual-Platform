@@ -133,3 +133,45 @@ export const getOrdersSortByPrice = async (order: 'asc' | 'des'): Promise<ApiRes
   const response = await axios.get(`${API_BASE_URL}/order/sort/totprice/${order}`);
   return response.data;
 };
+
+// 获取订单统计
+export const getOrderStatistics = async (merchantId?: string): Promise<ApiResponse<{
+  total: number;
+  byStatus: Array<{
+    _id: string;
+    count: number;
+    totalAmount: number;
+  }>;
+}>> => {
+  const response = await axios.get(`${API_BASE_URL}/order/statistics`, {
+    params: merchantId ? { merchantId } : {}
+  });
+  return response.data;
+};
+
+// 获取订单时间趋势统计
+export const getOrderTrendStatistics = async (merchantId?: string, period: 'day' | 'week' | 'month' = 'day'): Promise<ApiResponse<Array<{
+  _id: string;
+  count: number;
+  totalAmount: number;
+}>>> => {
+  const response = await axios.get(`${API_BASE_URL}/order/trend`, {
+    params: {
+      ...(merchantId ? { merchantId } : {}),
+      period
+    }
+  });
+  return response.data;
+};
+
+// 获取订单时段分析
+export const getOrderHourStatistics = async (merchantId?: string): Promise<ApiResponse<Array<{
+  _id: number;
+  count: number;
+  totalAmount: number;
+}>>> => {
+  const response = await axios.get(`${API_BASE_URL}/order/hour-statistics`, {
+    params: merchantId ? { merchantId } : {}
+  });
+  return response.data;
+};

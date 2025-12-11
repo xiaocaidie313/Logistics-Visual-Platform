@@ -37,4 +37,7 @@ router.get('/product/search', auth, ProductController.searchProducts.bind(Produc
 // 商品统计
 router.get('/product/statistics', auth, ProductController.getProductStatistics.bind(ProductController));
 
+// 商品销售排行
+router.get('/product/sales-ranking', auth, ProductController.getProductSalesRanking.bind(ProductController));
+
 export default router;

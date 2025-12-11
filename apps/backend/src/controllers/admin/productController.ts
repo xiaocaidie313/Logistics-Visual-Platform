@@ -215,6 +215,21 @@ export class ProductController {
       sendResponse(res, 400, errorMessage, {});
     }
   }
+
+  // 商品销售排行
+  async getProductSalesRanking(req: Request, res: Response): Promise<void> {
+    try {
+      const { merchantId, limit } = req.query;
+      const result = await ProductService.getProductSalesRanking(
+        merchantId as string,
+        limit ? parseInt(limit as string, 10) : 10
+      );
+      sendResponse(res, 200, 'Success', result);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '获取商品销售排行失败';
+      sendResponse(res, 400, errorMessage, {});
+    }
+  }
 }
 
 export default new ProductController();

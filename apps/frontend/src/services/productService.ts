@@ -121,3 +121,14 @@ export const getProductStatistics = async (merchantId?: string) => {
   });
   return response.data;
 };
+
+// 获取商品销售排行
+export const getProductSalesRanking = async (merchantId?: string, limit: number = 10) => {
+  const response = await axios.get(`${API_BASE_URL}/product/sales-ranking`, {
+    params: {
+      ...(merchantId ? { merchantId } : {}),
+      limit
+    }
+  });
+  return response.data;
+};

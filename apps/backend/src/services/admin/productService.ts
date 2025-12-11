@@ -197,6 +197,35 @@ export class ProductService {
 
     return result;
   }
+
+  // 商品销售排行
+  async getProductSalesRanking(merchantId?: string, limit: number = 10): Promise<any> {
+    const matchStage: any = {};
+    if (merchantId) {
+      matchStage.merchantId = new mongoose.Types.ObjectId(merchantId);
+    }
+
+    const ranking = await Product.aggregate([
+      ...(Object.keys(matchStage).length > 0 ? [{ $match: matchStage }] : []),
+      {
+        $project: {
+          productName: 1,
+          category: 1,
+          salesCount: 1,
+          status: 1,
+          images: 1,
+        },
+      },
+      {
+        $sort: { salesCount: -1 },
+      },
+      {
+        $limit: limit,
+      },
+    ]);
+
+    return ranking;
+  }
 }
 
 export default new ProductService();
