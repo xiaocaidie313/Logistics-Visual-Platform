@@ -136,7 +136,11 @@ export class OrderService {
         $group: {
           _id: '$status',
           count: { $sum: 1 },
-          totalAmount: { $sum: '$totalAmount' },
+          totalAmount: { 
+            $sum: {
+              $ifNull: ['$totalAmount', { $ifNull: ['$totprice', 0] }]
+            }
+          },
         },
       },
     ]);
@@ -196,7 +200,11 @@ export class OrderService {
             }
           },
           count: { $sum: 1 },
-          totalAmount: { $sum: '$totalAmount' },
+          totalAmount: { 
+            $sum: {
+              $ifNull: ['$totalAmount', { $ifNull: ['$totprice', 0] }]
+            }
+          },
         },
       },
       {
@@ -232,7 +240,11 @@ export class OrderService {
         $group: {
           _id: { $hour: '$ordertimeDate' },
           count: { $sum: 1 },
-          totalAmount: { $sum: '$totalAmount' },
+          totalAmount: { 
+            $sum: {
+              $ifNull: ['$totalAmount', { $ifNull: ['$totprice', 0] }]
+            }
+          },
         },
       },
       {
