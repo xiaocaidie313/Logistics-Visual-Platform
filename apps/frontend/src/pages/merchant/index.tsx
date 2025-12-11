@@ -141,8 +141,14 @@ const MerchantDashboard: React.FC = () => {
             }}
           />
         </Sider>
-        <Layout style={{ padding: 0 }}>
-          <Content style={{ margin: 0, minHeight: 280 }}>
+        <Layout style={{ padding: 0, height: 'calc(100vh - 64px)', overflow: 'hidden'}}>
+          <Content style={{ 
+           margin: 0, 
+           minHeight: 280,
+           height: '100%',
+           overflowY: 'auto',
+           overflowX: 'hidden'
+           }}>
             {/* 渲染组件 */}
             {renderContent()}
           </Content>
