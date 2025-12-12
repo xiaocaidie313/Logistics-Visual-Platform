@@ -3,6 +3,7 @@ import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { useEffect, useState, useRef } from 'react';
 import { DeliveryMethods } from '../services/merchantService';
 import { areaData } from '../utils/areaData';
+import { AMAP_KEY } from '../utils/config';
 
 // 声明高德地图类型
 declare global {
@@ -156,7 +157,7 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
             return;
         }
 
-        const amapKey = import.meta.env.VITE_AMAP_KEY || 'YOUR_AMAP_KEY_HERE';
+        const amapKey = import.meta.env.VITE_AMAP_KEY || AMAP_KEY;
         
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -743,7 +744,7 @@ const DeliveryRangeModal: React.FC<DeliveryRangeModalProps> = ({
                 cancelText="取消"
             >
                 <div style={{ marginBottom: 16 }}>
-                    <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space orientation="vertical" style={{ width: '100%' }}>
                         <Space>
                             <span>区域类型:</span>
                             <Radio.Group value={drawType} onChange={handleDrawTypeChange}>

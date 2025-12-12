@@ -208,7 +208,7 @@ const LogisticsTracking: React.FC = () => {
                         ● System: {wsStatus}
                     </p>
 
-                    <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space orientation="vertical" style={{ width: '100%' }}>
                         <Search
                             placeholder="请输入运单号 (例如 SF10027)"
                             enterButton="查询"
