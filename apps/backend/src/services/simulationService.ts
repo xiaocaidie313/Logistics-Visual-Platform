@@ -336,7 +336,7 @@ const checkAndDispatch = async (hubName: string) => {
 
   const now = Date.now();
   // 超时派送  // 对于一个集散点 如果超过10分钟或者 超过5单 则触发派送  挨个派送 
-  const TIMEOUT_THRESHOLD = 10*1000; // 10分钟
+  const TIMEOUT_THRESHOLD = 60*1000; // 10分钟
   const isFull = orders.length >= 5;
   const isTimeout = orders.some((o: any) => o.hubArrivalTime && (now - new Date(o.hubArrivalTime).getTime() > TIMEOUT_THRESHOLD));
 
